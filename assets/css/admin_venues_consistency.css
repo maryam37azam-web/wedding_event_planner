@@ -1,0 +1,137 @@
+/*
+|--------------------------------------------------------------------------
+| Compact Manage Venues cards
+|--------------------------------------------------------------------------
+| These rules only affect the venue cards on admin/venues.php. The form,
+| summary cards, sidebar and modal keep their existing styling.
+*/
+
+.venue-grid {
+    width: 100% !important;
+    max-width: 930px !important;
+
+    display: grid !important;
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+}
+
+.venue-card {
+    min-width: 0 !important;
+
+    overflow: hidden !important;
+
+    border-radius: 13px !important;
+
+    box-shadow:
+        0 3px 12px
+        rgba(54, 24, 39, 0.06) !important;
+}
+
+.venue-card:hover {
+    transform: translateY(-2px) !important;
+
+    box-shadow:
+        0 8px 20px
+        rgba(54, 24, 39, 0.10) !important;
+}
+
+.venue-card-main-image-wrap {
+    height: 165px !important;
+}
+
+.venue-main-reset-button {
+    top: 9px !important;
+    right: 9px !important;
+
+    min-height: 28px !important;
+    padding: 5px 8px !important;
+
+    gap: 5px !important;
+
+    font-size: 9px !important;
+}
+
+.venue-card-content {
+    padding: 11px !important;
+}
+
+.venue-website-status {
+    margin-bottom: 8px !important;
+    padding: 4px 8px !important;
+
+    font-size: 9px !important;
+}
+
+.venue-card h3 {
+    margin-bottom: 6px !important;
+
+    font-size: 17px !important;
+    line-height: 1.3 !important;
+}
+
+.venue-card-description {
+    min-height: 44px !important;
+    margin-bottom: 9px !important;
+
+    display: -webkit-box !important;
+    overflow: hidden !important;
+
+    font-size: 10px !important;
+    line-height: 1.45 !important;
+
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 3 !important;
+}
+
+.venue-thumbnail-row {
+    margin-bottom: 9px !important;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+}
+
+.venue-thumbnail-button {
+    position: relative !important;
+
+    height: 43px !important;
+
+    border-radius: 7px !important;
+}
+
+.venue-actions {
+    gap: 7px !important;
+}
+
+.venue-edit-button,
+.venue-delete-button {
+    min-height: 34px !important;
+    padding: 7px 9px !important;
+
+    border-radius: 7px !important;
+
+    font-size: 10px !important;
+}
+
+@media (max-width: 1180px) {
+    .venue-grid {
+        max-width: 620px !important;
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 700px) {
+    .venue-grid {
+        max-width: none !important;
+
+        grid-template-columns: 1fr !important;
+    }
+
+    .venue-card-main-image-wrap {
+        height: 215px !important;
+    }
+}

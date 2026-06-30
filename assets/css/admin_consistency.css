@@ -1,0 +1,611 @@
+/*
+|--------------------------------------------------------------------------
+| Shared administrator interface consistency
+|--------------------------------------------------------------------------
+| This stylesheet keeps every administrator sidebar aligned with the main
+| dashboard while leaving each page's own content design unchanged.
+*/
+
+:root {
+    --admin-shared-sidebar-width: 235px;
+    --admin-shared-primary: #a4004d;
+    --admin-shared-primary-dark: #790032;
+    --admin-shared-white: #ffffff;
+}
+
+/* Shared desktop sidebar shell */
+
+.admin-sidebar,
+.admin-bookings-sidebar,
+.admin-feedback-sidebar,
+.admin-gallery-sidebar,
+.notifications-sidebar,
+.profile-sidebar,
+.gallery-sidebar {
+    width: var(--admin-shared-sidebar-width) !important;
+    height: 100vh !important;
+    padding: 15px !important;
+
+    overflow-y: auto !important;
+
+    background: linear-gradient(
+        to bottom,
+        var(--admin-shared-primary),
+        var(--admin-shared-primary-dark)
+    ) !important;
+
+    color: var(--admin-shared-white) !important;
+}
+
+.admin-sidebar::-webkit-scrollbar,
+.admin-bookings-sidebar::-webkit-scrollbar,
+.admin-feedback-sidebar::-webkit-scrollbar,
+.admin-gallery-sidebar::-webkit-scrollbar,
+.notifications-sidebar::-webkit-scrollbar,
+.profile-sidebar::-webkit-scrollbar,
+.gallery-sidebar::-webkit-scrollbar {
+    width: 5px !important;
+}
+
+.admin-sidebar::-webkit-scrollbar-thumb,
+.admin-bookings-sidebar::-webkit-scrollbar-thumb,
+.admin-feedback-sidebar::-webkit-scrollbar-thumb,
+.admin-gallery-sidebar::-webkit-scrollbar-thumb,
+.notifications-sidebar::-webkit-scrollbar-thumb,
+.profile-sidebar::-webkit-scrollbar-thumb,
+.gallery-sidebar::-webkit-scrollbar-thumb {
+    border-radius: 20px !important;
+    background: rgba(255, 255, 255, 0.35) !important;
+}
+
+/* Shared logo */
+
+.admin-logo,
+.admin-bookings-logo,
+.admin-feedback-logo,
+.admin-gallery-logo,
+.notifications-logo,
+.sidebar-logo,
+.gallery-sidebar-logo {
+    margin: 0 0 14px !important;
+    padding: 0 !important;
+    text-align: center !important;
+}
+
+.admin-logo h1,
+.admin-bookings-logo h1,
+.admin-feedback-logo h1,
+.admin-gallery-logo h1,
+.notifications-logo h1,
+.sidebar-logo h1,
+.gallery-sidebar-logo h1 {
+    margin: 0 !important;
+
+    color: #ffffff !important;
+
+    font-family: cursive !important;
+    font-size: 34px !important;
+    line-height: 38px !important;
+}
+
+.admin-logo p,
+.admin-bookings-logo p,
+.admin-feedback-logo p,
+.admin-gallery-logo p,
+.notifications-logo p,
+.sidebar-logo p,
+.gallery-sidebar-logo p {
+    margin-top: 2px !important;
+
+    color: rgba(255, 255, 255, 0.94) !important;
+
+    font-size: 16px !important;
+    line-height: 1.35 !important;
+}
+
+/* Shared administrator profile block */
+
+.admin-profile,
+.admin-bookings-profile,
+.admin-feedback-profile,
+.admin-gallery-profile,
+.notifications-profile,
+.sidebar-profile,
+.gallery-sidebar-profile {
+    margin: 0 0 20px !important;
+    padding: 0 !important;
+    text-align: center !important;
+}
+
+.admin-profile img,
+.admin-bookings-profile img,
+.admin-feedback-profile img,
+.admin-gallery-profile img,
+.notifications-profile img,
+.sidebar-profile img,
+.gallery-sidebar-profile img {
+    width: 78px !important;
+    height: 78px !important;
+
+    border: 3px solid #ffe4a8 !important;
+    border-radius: 50% !important;
+
+    background: #ffffff !important;
+    object-fit: cover !important;
+}
+
+.admin-profile h2,
+.admin-bookings-profile h2,
+.admin-feedback-profile h2,
+.admin-gallery-profile h2,
+.notifications-profile h2,
+.gallery-sidebar-profile h2,
+.sidebar-profile strong {
+    margin-top: 8px !important;
+
+    display: block !important;
+
+    color: #ffffff !important;
+
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    line-height: 1.3 !important;
+}
+
+.admin-profile > p,
+.admin-bookings-profile > p,
+.admin-feedback-profile > p,
+.admin-gallery-profile > p,
+.notifications-profile > p,
+.gallery-sidebar-profile > p,
+.sidebar-profile .admin-linked-about {
+    margin-top: 3px !important;
+
+    display: block !important;
+
+    color: rgba(255, 255, 255, 0.86) !important;
+
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    line-height: 1.4 !important;
+
+    overflow-wrap: anywhere !important;
+}
+
+.online-status,
+.admin-bookings-online,
+.admin-feedback-online,
+.admin-gallery-online,
+.notifications-online,
+.gallery-online-status {
+    margin-top: 7px !important;
+
+    color: #8cff8c !important;
+
+    font-size: 13px !important;
+    font-weight: 500 !important;
+}
+
+/* Shared navigation sizing */
+
+.admin-menu,
+.admin-bookings-menu,
+.admin-feedback-menu,
+.admin-gallery-menu,
+.notifications-menu,
+.sidebar-menu,
+.gallery-sidebar-menu {
+    margin-top: 15px !important;
+    padding: 0 0 20px !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+}
+
+.admin-menu a,
+.admin-bookings-menu a,
+.admin-feedback-menu a,
+.admin-gallery-menu a,
+.notifications-menu a,
+.sidebar-menu a,
+.gallery-sidebar-menu a {
+    min-height: 45px !important;
+    margin: 0 !important;
+    padding: 11px 13px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+
+    border-radius: 11px !important;
+
+    color: #ffffff !important;
+
+    text-decoration: none !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    line-height: 1.35 !important;
+}
+
+.admin-menu a i,
+.admin-bookings-menu a i,
+.admin-feedback-menu a i,
+.admin-gallery-menu a i,
+.notifications-menu a i,
+.sidebar-menu a i,
+.gallery-sidebar-menu a i {
+    width: 21px !important;
+
+    flex: 0 0 21px !important;
+
+    text-align: center !important;
+    font-size: 16px !important;
+}
+
+.admin-menu a:hover,
+.admin-menu a.active,
+.admin-bookings-menu a:hover,
+.admin-bookings-menu a.active,
+.admin-feedback-menu a:hover,
+.admin-feedback-menu a.active,
+.admin-gallery-menu a:hover,
+.admin-gallery-menu a.active,
+.notifications-menu a:hover,
+.notifications-menu a.active,
+.sidebar-menu a:hover,
+.sidebar-menu a.active,
+.gallery-sidebar-menu a:hover,
+.gallery-sidebar-menu a.active {
+    background: #ffffff !important;
+    color: var(--admin-shared-primary) !important;
+}
+
+.admin-menu .logout-link,
+.admin-bookings-menu .admin-bookings-logout,
+.admin-feedback-menu .admin-feedback-logout,
+.admin-gallery-menu .admin-gallery-logout,
+.notifications-menu .notifications-logout,
+.sidebar-menu .logout-link,
+.gallery-sidebar-menu .gallery-logout-link {
+    margin-top: 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.30) !important;
+}
+
+/* Keep all administrator content aligned with the same sidebar width */
+
+.admin-main,
+.admin-bookings-main,
+.admin-feedback-main,
+.admin-gallery-main,
+.notifications-main,
+.profile-main,
+.gallery-main-content {
+    margin-left: var(--admin-shared-sidebar-width) !important;
+    padding: 20px !important;
+}
+
+/* Smaller About field on the administrator profile page */
+
+body.profile-page #about {
+    height: 58px !important;
+    min-height: 58px !important;
+    max-height: 90px !important;
+
+    resize: vertical !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Package card consistency and main-image selector
+|--------------------------------------------------------------------------
+*/
+
+.package-card-main-image-wrap,
+.all-package-main-image-wrap {
+    position: relative !important;
+}
+
+.package-main-photo-badge {
+    position: absolute !important;
+    top: 12px !important;
+    right: 12px !important;
+    z-index: 3 !important;
+
+    min-height: 34px !important;
+    padding: 7px 12px !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+
+    border-radius: 999px !important;
+
+    background: rgba(255, 255, 255, 0.96) !important;
+    color: #b00055 !important;
+
+    box-shadow:
+        0 5px 16px
+        rgba(71, 24, 47, 0.15) !important;
+
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+}
+
+.package-main-photo-badge.is-hidden {
+    display: none !important;
+}
+
+.package-main-thumbnail,
+.all-package-thumbnail.package-main-thumbnail {
+    position: relative !important;
+}
+
+.package-main-thumbnail-label {
+    position: absolute !important;
+    right: 4px !important;
+    bottom: 4px !important;
+    z-index: 2 !important;
+
+    padding: 3px 6px !important;
+
+    border-radius: 999px !important;
+
+    background: rgba(176, 0, 85, 0.92) !important;
+    color: #ffffff !important;
+
+    font-size: 8px !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.2px !important;
+}
+
+/* Manage Packages cards */
+
+.package-grid {
+    width: 100% !important;
+    max-width: 940px !important;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr)) !important;
+
+    gap: 14px !important;
+}
+
+.package-card {
+    border-radius: 14px !important;
+}
+
+.package-card-main-image-wrap {
+    height: 170px !important;
+}
+
+.package-card-content {
+    padding: 12px !important;
+}
+
+.package-website-status {
+    margin-bottom: 8px !important;
+    padding: 4px 8px !important;
+
+    font-size: 9px !important;
+}
+
+.package-card h3 {
+    margin-bottom: 7px !important;
+
+    font-size: 18px !important;
+    line-height: 1.25 !important;
+}
+
+.package-card-description {
+    min-height: 51px !important;
+    margin-bottom: 10px !important;
+
+    display: -webkit-box !important;
+    overflow: hidden !important;
+
+    color: #71686e !important;
+
+    font-size: 12px !important;
+    line-height: 1.42 !important;
+
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 3 !important;
+}
+
+.package-thumbnail-row {
+    margin-bottom: 10px !important;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr)) !important;
+
+    gap: 6px !important;
+}
+
+.package-thumbnail-button {
+    height: 49px !important;
+    border-radius: 8px !important;
+}
+
+.package-actions {
+    gap: 7px !important;
+}
+
+.package-edit-button,
+.package-delete-button {
+    min-height: 39px !important;
+    padding: 8px 10px !important;
+
+    font-size: 12px !important;
+}
+
+/* View All Packages cards */
+
+.all-packages-grid {
+    width: 100% !important;
+    max-width: 960px !important;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr)) !important;
+
+    gap: 14px !important;
+}
+
+.all-package-card {
+    border-radius: 14px !important;
+}
+
+.all-package-main-image-wrap {
+    height: 170px !important;
+}
+
+.all-package-card-body {
+    padding: 12px !important;
+}
+
+.all-package-status {
+    margin-bottom: 8px !important;
+    padding: 4px 8px !important;
+
+    font-size: 9px !important;
+}
+
+.all-package-card h2 {
+    margin-bottom: 7px !important;
+
+    font-size: 18px !important;
+    line-height: 1.25 !important;
+}
+
+.all-package-description {
+    min-height: 51px !important;
+    margin-bottom: 10px !important;
+
+    display: -webkit-box !important;
+    overflow: hidden !important;
+
+    font-size: 12px !important;
+    line-height: 1.42 !important;
+
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 3 !important;
+}
+
+.all-package-thumbnails {
+    margin-bottom: 10px !important;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr)) !important;
+
+    gap: 6px !important;
+}
+
+.all-package-thumbnail {
+    height: 49px !important;
+    border-radius: 8px !important;
+}
+
+.all-package-actions {
+    gap: 7px !important;
+}
+
+.all-package-edit-button,
+.all-package-delete-button {
+    min-height: 39px !important;
+    padding: 8px 10px !important;
+
+    font-size: 12px !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Navigation button behaviour
+|--------------------------------------------------------------------------
+*/
+
+@media (min-width: 1001px) {
+    .sidebar-toggle,
+    .admin-bookings-menu-button,
+    .admin-feedback-menu-button,
+    .admin-gallery-menu-button,
+    .notifications-menu-button,
+    .mobile-menu-button,
+    .gallery-mobile-menu-button {
+        display: none !important;
+    }
+}
+
+@media (max-width: 1000px) {
+    .admin-sidebar,
+    .admin-bookings-sidebar,
+    .admin-feedback-sidebar,
+    .admin-gallery-sidebar,
+    .notifications-sidebar,
+    .profile-sidebar,
+    .gallery-sidebar {
+        transform: translateX(-100%) !important;
+    }
+
+    .admin-sidebar.open,
+    .admin-bookings-sidebar.open,
+    .admin-feedback-sidebar.open,
+    .admin-gallery-sidebar.open,
+    .notifications-sidebar.open,
+    .profile-sidebar.open,
+    .gallery-sidebar.open {
+        transform: translateX(0) !important;
+    }
+
+    .admin-main,
+    .admin-bookings-main,
+    .admin-feedback-main,
+    .admin-gallery-main,
+    .notifications-main,
+    .profile-main,
+    .gallery-main-content {
+        margin-left: 0 !important;
+    }
+
+    .sidebar-toggle,
+    .admin-bookings-menu-button,
+    .admin-feedback-menu-button,
+    .admin-gallery-menu-button,
+    .notifications-menu-button,
+    .mobile-menu-button,
+    .gallery-mobile-menu-button {
+        display: inline-flex !important;
+    }
+
+    .sidebar-overlay.open,
+    .admin-bookings-sidebar-overlay.open,
+    .admin-feedback-sidebar-overlay.open,
+    .admin-gallery-sidebar-overlay.open,
+    .notifications-sidebar-overlay.open,
+    .gallery-sidebar-overlay.open {
+        display: block !important;
+    }
+
+    .package-grid,
+    .all-packages-grid {
+        max-width: none !important;
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 650px) {
+    .package-grid,
+    .all-packages-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .package-card-main-image-wrap,
+    .all-package-main-image-wrap {
+        height: 205px !important;
+    }
+}

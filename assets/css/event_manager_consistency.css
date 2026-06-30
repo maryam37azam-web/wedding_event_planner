@@ -1,0 +1,611 @@
+/*
+|--------------------------------------------------------------------------
+| Shared Event Manager interface
+|--------------------------------------------------------------------------
+| Dashboard, Assigned Tasks, Notifications, Manage Profile, Gallery
+| Management and Feedback all use this same layout.
+*/
+
+:root {
+    --event-shared-sidebar-width: 240px;
+    --event-shared-primary: #a4004d;
+    --event-shared-primary-dark: #730034;
+    --event-shared-white: #ffffff;
+    --event-shared-online: #8cff99;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Shared sidebar shell
+|--------------------------------------------------------------------------
+*/
+
+.event-sidebar,
+.assigned-tasks-sidebar,
+.notifications-sidebar,
+.profile-sidebar,
+.gallery-sidebar,
+.event-feedback-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: 0 !important;
+    z-index: 1200 !important;
+
+    width:
+        var(
+            --event-shared-sidebar-width
+        ) !important;
+
+    height: 100vh !important;
+    padding: 18px !important;
+
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+
+    background:
+        linear-gradient(
+            to bottom,
+            var(--event-shared-primary),
+            var(--event-shared-primary-dark)
+        ) !important;
+
+    color:
+        var(--event-shared-white) !important;
+
+    transition:
+        transform 0.3s ease !important;
+}
+
+.event-sidebar::-webkit-scrollbar,
+.assigned-tasks-sidebar::-webkit-scrollbar,
+.notifications-sidebar::-webkit-scrollbar,
+.profile-sidebar::-webkit-scrollbar,
+.gallery-sidebar::-webkit-scrollbar,
+.event-feedback-sidebar::-webkit-scrollbar {
+    width: 5px !important;
+}
+
+.event-sidebar::-webkit-scrollbar-thumb,
+.assigned-tasks-sidebar::-webkit-scrollbar-thumb,
+.notifications-sidebar::-webkit-scrollbar-thumb,
+.profile-sidebar::-webkit-scrollbar-thumb,
+.gallery-sidebar::-webkit-scrollbar-thumb,
+.event-feedback-sidebar::-webkit-scrollbar-thumb {
+    border-radius: 20px !important;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.32
+        ) !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Shared Wedding logo
+|--------------------------------------------------------------------------
+*/
+
+.event-logo,
+.assigned-tasks-logo,
+.notifications-logo,
+.sidebar-logo,
+.gallery-sidebar-logo,
+.event-feedback-logo {
+    margin: 0 0 18px !important;
+    padding: 0 !important;
+
+    text-align: center !important;
+}
+
+.event-logo h1,
+.assigned-tasks-logo h1,
+.notifications-logo h1,
+.sidebar-logo h1,
+.gallery-sidebar-logo h1,
+.event-feedback-logo h1 {
+    margin: 0 !important;
+
+    color: #ffffff !important;
+
+    font-family: cursive !important;
+    font-size: 32px !important;
+    line-height: 38px !important;
+}
+
+.event-logo p,
+.assigned-tasks-logo p,
+.notifications-logo p,
+.sidebar-logo p,
+.gallery-sidebar-logo p,
+.event-feedback-logo p {
+    margin-top: 2px !important;
+
+    color:
+        rgba(
+            255,
+            255,
+            255,
+            0.86
+        ) !important;
+
+    opacity: 1 !important;
+
+    font-size: 14px !important;
+    line-height: 1.35 !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Shared Event Manager profile
+|--------------------------------------------------------------------------
+*/
+
+.event-profile,
+.assigned-tasks-profile,
+.notifications-profile,
+.sidebar-profile,
+.gallery-sidebar-profile,
+.event-feedback-profile {
+    margin: 0 0 25px !important;
+    padding: 0 !important;
+
+    text-align: center !important;
+}
+
+.event-profile img,
+.assigned-tasks-profile img,
+.notifications-profile img,
+.sidebar-profile img,
+.gallery-sidebar-profile img,
+.event-feedback-profile img {
+    width: 80px !important;
+    height: 80px !important;
+
+    border:
+        4px solid #ffd166 !important;
+
+    border-radius: 50% !important;
+
+    background: #ffffff !important;
+
+    object-fit: cover !important;
+
+    box-shadow: none !important;
+}
+
+.event-profile h2,
+.assigned-tasks-profile h2,
+.notifications-profile h2,
+.gallery-sidebar-profile h2,
+.event-feedback-profile h2,
+.sidebar-profile strong {
+    margin-top: 8px !important;
+
+    display: block !important;
+
+    color: #ffffff !important;
+
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    line-height: 1.3 !important;
+
+    overflow-wrap: anywhere !important;
+}
+
+.event-profile > p,
+.assigned-tasks-profile > p,
+.notifications-profile > p,
+.gallery-sidebar-profile > p,
+.event-feedback-profile > p,
+.sidebar-profile > span,
+.event-manager-linked-about {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-top: 3px !important;
+
+    display: block !important;
+    overflow: hidden !important;
+
+    color:
+        rgba(
+            255,
+            255,
+            255,
+            0.84
+        ) !important;
+
+    opacity: 1 !important;
+
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    line-height: 20px !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.event-online,
+.assigned-tasks-online,
+.notifications-online,
+.gallery-online-status,
+.event-feedback-online {
+    margin-top: 7px !important;
+
+    color:
+        var(
+            --event-shared-online
+        ) !important;
+
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    line-height: 1.4 !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Shared sidebar navigation
+|--------------------------------------------------------------------------
+*/
+
+.event-menu,
+.assigned-tasks-menu,
+.notifications-menu,
+.sidebar-menu,
+.gallery-sidebar-menu,
+.event-feedback-menu {
+    margin: 0 !important;
+    padding: 0 0 20px !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 7px !important;
+}
+
+.event-menu a,
+.assigned-tasks-menu a,
+.notifications-menu a,
+.sidebar-menu a,
+.gallery-sidebar-menu a,
+.event-feedback-menu a {
+    width: 100% !important;
+    min-height: 44px !important;
+    margin: 0 !important;
+    padding: 11px 12px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+
+    border-radius: 12px !important;
+
+    color: #ffffff !important;
+
+    text-decoration: none !important;
+
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    line-height: 1.35 !important;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease !important;
+}
+
+.event-menu a i,
+.assigned-tasks-menu a i,
+.notifications-menu a i,
+.sidebar-menu a i,
+.gallery-sidebar-menu a i,
+.event-feedback-menu a i {
+    width: 21px !important;
+
+    flex: 0 0 21px !important;
+
+    text-align: center !important;
+
+    font-size: 15px !important;
+}
+
+.event-menu a:hover,
+.event-menu a.active,
+.assigned-tasks-menu a:hover,
+.assigned-tasks-menu a.active,
+.notifications-menu a:hover,
+.notifications-menu a.active,
+.sidebar-menu a:hover,
+.sidebar-menu a.active,
+.gallery-sidebar-menu a:hover,
+.gallery-sidebar-menu a.active,
+.event-feedback-menu a:hover,
+.event-feedback-menu a.active {
+    background: #ffffff !important;
+
+    color:
+        var(
+            --event-shared-primary
+        ) !important;
+
+    transform: none !important;
+}
+
+.event-menu .event-logout,
+.assigned-tasks-menu
+.assigned-tasks-logout,
+.notifications-menu
+.notifications-logout,
+.sidebar-menu .logout-link,
+.gallery-sidebar-menu
+.gallery-logout-link,
+.event-feedback-menu
+.event-feedback-logout {
+    margin-top: 10px !important;
+
+    border:
+        1px solid
+        rgba(
+            255,
+            255,
+            255,
+            0.28
+        ) !important;
+
+    color: #ffffff !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Align every page with the shared sidebar
+|--------------------------------------------------------------------------
+*/
+
+.event-main,
+.assigned-tasks-main,
+.notifications-main,
+.profile-main,
+.gallery-main-content,
+.event-feedback-main {
+    margin-left:
+        var(
+            --event-shared-sidebar-width
+        ) !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Compact one-line About field
+|--------------------------------------------------------------------------
+*/
+
+body.profile-page #about {
+    height: 46px !important;
+    min-height: 46px !important;
+    max-height: 46px !important;
+    padding-top: 11px !important;
+    padding-bottom: 11px !important;
+
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+
+    line-height: 22px !important;
+
+    resize: none !important;
+    white-space: nowrap !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Event Manager View All Gallery header profile
+|--------------------------------------------------------------------------
+| This matches the clean two-line Admin profile shown on the Admin version
+| of the shared View All Gallery page.
+*/
+
+body.all-gallery-page .all-gallery-user {
+    min-height: 48px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+
+    color: inherit !important;
+
+    text-align: right !important;
+    text-decoration: none !important;
+}
+
+body.all-gallery-page
+.all-gallery-user > div {
+    min-width: 0 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+}
+
+body.all-gallery-page
+.all-gallery-user strong {
+    margin: 0 !important;
+
+    display: block !important;
+
+    color: #332e34 !important;
+
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    line-height: 16px !important;
+}
+
+body.all-gallery-page
+.all-gallery-user span,
+body.all-gallery-page
+.all-gallery-user
+.event-manager-header-about {
+    width: auto !important;
+    max-width: 220px !important;
+    margin: 2px 0 0 !important;
+
+    display: block !important;
+    overflow: hidden !important;
+
+    color: #777078 !important;
+
+    font-size: 10px !important;
+    font-weight: 400 !important;
+    line-height: 14px !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+body.all-gallery-page
+.all-gallery-user a {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    text-decoration: none !important;
+}
+
+body.all-gallery-page
+.all-gallery-user img {
+    width: 43px !important;
+    height: 43px !important;
+
+    display: block !important;
+
+    border:
+        2px solid #ffd5e3 !important;
+
+    border-radius: 50% !important;
+
+    background: #ffffff !important;
+
+    object-fit: cover !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Remove the separate Remove Second Image option
+|--------------------------------------------------------------------------
+| The second image upload field remains available, so the image can still
+| be replaced by selecting a new file.
+*/
+
+body.gallery-role-event_manager
+.gallery-remove-second-button,
+body.gallery-role-event_manager
+#removeSecondImageButton {
+    display: none !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Remove circular desktop menu buttons
+|--------------------------------------------------------------------------
+*/
+
+@media (min-width: 1001px) {
+    .event-menu-toggle,
+    .assigned-tasks-menu-button,
+    .notifications-menu-button,
+    .mobile-menu-button,
+    .gallery-mobile-menu-button,
+    .event-feedback-menu-button {
+        display: none !important;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Mobile navigation
+|--------------------------------------------------------------------------
+*/
+
+@media (max-width: 1000px) {
+    .event-sidebar,
+    .assigned-tasks-sidebar,
+    .notifications-sidebar,
+    .profile-sidebar,
+    .gallery-sidebar,
+    .event-feedback-sidebar {
+        transform:
+            translateX(-100%) !important;
+    }
+
+    .event-sidebar.open,
+    .assigned-tasks-sidebar.open,
+    .notifications-sidebar.open,
+    .profile-sidebar.open,
+    .gallery-sidebar.open,
+    .event-feedback-sidebar.open {
+        transform:
+            translateX(0) !important;
+    }
+
+    .event-main,
+    .assigned-tasks-main,
+    .notifications-main,
+    .profile-main,
+    .gallery-main-content,
+    .event-feedback-main {
+        margin-left: 0 !important;
+    }
+
+    .event-menu-toggle,
+    .assigned-tasks-menu-button,
+    .notifications-menu-button,
+    .mobile-menu-button,
+    .gallery-mobile-menu-button,
+    .event-feedback-menu-button {
+        width: 42px !important;
+        height: 42px !important;
+
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+
+        border: 0 !important;
+        border-radius: 10px !important;
+
+        background:
+            var(
+                --event-shared-primary
+            ) !important;
+
+        color: #ffffff !important;
+
+        box-shadow:
+            0 3px 12px
+            rgba(
+                164,
+                0,
+                77,
+                0.18
+            ) !important;
+
+        font-size: 17px !important;
+    }
+
+    .event-sidebar-overlay.open,
+    .assigned-tasks-sidebar-overlay.open,
+    .notifications-sidebar-overlay.open,
+    .sidebar-overlay.open,
+    .gallery-sidebar-overlay.open,
+    .event-feedback-sidebar-overlay.open {
+        display: block !important;
+    }
+}
+
+@media (max-width: 580px) {
+    body.all-gallery-page
+    .all-gallery-user > div {
+        display: none !important;
+    }
+}

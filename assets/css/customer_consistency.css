@@ -1,0 +1,677 @@
+/*
+|--------------------------------------------------------------------------
+| Shared Customer interface
+|--------------------------------------------------------------------------
+| Dashboard, Packages, Venues, Gallery, Book Event, My Bookings, Feedback
+| and Manage Profile all use this same sidebar design.
+*/
+
+:root {
+    --customer-shared-sidebar-width: 250px;
+    --customer-shared-primary: #a4004d;
+    --customer-shared-primary-dark: #730034;
+    --customer-shared-white: #ffffff;
+    --customer-shared-online: #8cff99;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Shared sidebar
+|--------------------------------------------------------------------------
+*/
+
+.customer-shared-sidebar,
+.customer-sidebar,
+.profile-sidebar,
+.customer-package-sidebar,
+.customer-packages-sidebar,
+.customer-venue-sidebar,
+.customer-venues-sidebar,
+.customer-gallery-sidebar,
+.customer-booking-sidebar,
+.customer-feedback-sidebar,
+.my-bookings-sidebar,
+aside.sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: 0 !important;
+    z-index: 1200 !important;
+
+    width:
+        var(
+            --customer-shared-sidebar-width
+        ) !important;
+
+    min-width:
+        var(
+            --customer-shared-sidebar-width
+        ) !important;
+
+    max-width:
+        var(
+            --customer-shared-sidebar-width
+        ) !important;
+
+    height: 100vh !important;
+    padding: 20px !important;
+
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+
+    background:
+        linear-gradient(
+            to bottom,
+            var(--customer-shared-primary),
+            var(--customer-shared-primary-dark)
+        ) !important;
+
+    color:
+        var(--customer-shared-white) !important;
+
+    transition:
+        transform 0.3s ease !important;
+}
+
+.customer-shared-sidebar::-webkit-scrollbar,
+.customer-sidebar::-webkit-scrollbar,
+.profile-sidebar::-webkit-scrollbar,
+.customer-package-sidebar::-webkit-scrollbar,
+.customer-packages-sidebar::-webkit-scrollbar,
+.customer-venue-sidebar::-webkit-scrollbar,
+.customer-venues-sidebar::-webkit-scrollbar,
+.customer-gallery-sidebar::-webkit-scrollbar,
+.customer-booking-sidebar::-webkit-scrollbar,
+.customer-feedback-sidebar::-webkit-scrollbar,
+.my-bookings-sidebar::-webkit-scrollbar {
+    width: 5px !important;
+}
+
+.customer-shared-sidebar::-webkit-scrollbar-thumb,
+.customer-sidebar::-webkit-scrollbar-thumb,
+.profile-sidebar::-webkit-scrollbar-thumb,
+.customer-package-sidebar::-webkit-scrollbar-thumb,
+.customer-packages-sidebar::-webkit-scrollbar-thumb,
+.customer-venue-sidebar::-webkit-scrollbar-thumb,
+.customer-venues-sidebar::-webkit-scrollbar-thumb,
+.customer-gallery-sidebar::-webkit-scrollbar-thumb,
+.customer-booking-sidebar::-webkit-scrollbar-thumb,
+.customer-feedback-sidebar::-webkit-scrollbar-thumb,
+.my-bookings-sidebar::-webkit-scrollbar-thumb {
+    border-radius: 20px !important;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.30
+        ) !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Wedding logo
+|--------------------------------------------------------------------------
+*/
+
+.customer-shared-logo,
+.customer-logo,
+.sidebar-logo,
+.profile-logo,
+.customer-sidebar-logo,
+.customer-gallery-logo,
+.customer-package-logo,
+.customer-venue-logo {
+    margin: 0 0 20px !important;
+    padding: 0 !important;
+
+    text-align: center !important;
+}
+
+.customer-shared-logo h1,
+.customer-logo h1,
+.sidebar-logo h1,
+.profile-logo h1,
+.customer-sidebar-logo h1,
+.customer-gallery-logo h1,
+.customer-package-logo h1,
+.customer-venue-logo h1 {
+    margin: 0 !important;
+
+    color: #ffffff !important;
+
+    font-family: cursive !important;
+    font-size: 34px !important;
+    font-weight: 700 !important;
+    line-height: 40px !important;
+}
+
+.customer-shared-logo p,
+.customer-logo p,
+.sidebar-logo p,
+.profile-logo p,
+.customer-sidebar-logo p,
+.customer-gallery-logo p,
+.customer-package-logo p,
+.customer-venue-logo p {
+    margin: 2px 0 0 !important;
+
+    color:
+        rgba(
+            255,
+            255,
+            255,
+            0.86
+        ) !important;
+
+    opacity: 1 !important;
+
+    font-size: 14px !important;
+    line-height: 1.35 !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Customer profile block
+|--------------------------------------------------------------------------
+*/
+
+.customer-shared-profile,
+.customer-profile,
+.customer-sidebar-profile,
+.sidebar-profile,
+.profile-sidebar-user,
+.customer-package-profile,
+.customer-venue-profile,
+.customer-gallery-profile,
+.customer-booking-profile,
+.customer-feedback-profile,
+.my-bookings-profile {
+    margin: 0 0 25px !important;
+    padding: 0 !important;
+
+    text-align: center !important;
+}
+
+.customer-shared-profile img,
+.customer-profile img,
+.customer-sidebar-profile img,
+.sidebar-profile img,
+.profile-sidebar-user img,
+.customer-package-profile img,
+.customer-venue-profile img,
+.customer-gallery-profile img,
+.customer-booking-profile img,
+.customer-feedback-profile img,
+.my-bookings-profile img {
+    width: 80px !important;
+    height: 80px !important;
+
+    border:
+        4px solid #ffd6e5 !important;
+
+    border-radius: 50% !important;
+
+    background: #ffffff !important;
+
+    object-fit: cover !important;
+
+    box-shadow: none !important;
+}
+
+.customer-shared-profile h2,
+.customer-shared-profile h3,
+.customer-shared-profile strong,
+.customer-profile h2,
+.customer-sidebar-profile h2,
+.sidebar-profile strong,
+.profile-sidebar-user h2,
+.customer-package-profile h2,
+.customer-venue-profile h2,
+.customer-gallery-profile h2,
+.customer-booking-profile h2,
+.customer-feedback-profile h2,
+.my-bookings-profile h2 {
+    margin: 9px 0 0 !important;
+
+    display: block !important;
+
+    color: #ffffff !important;
+
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    line-height: 1.3 !important;
+
+    overflow-wrap: anywhere !important;
+}
+
+.customer-shared-about,
+.customer-about,
+.customer-role,
+.profile-role,
+.sidebar-role {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 3px 0 0 !important;
+
+    display: block !important;
+    overflow: hidden !important;
+
+    color:
+        rgba(
+            255,
+            255,
+            255,
+            0.84
+        ) !important;
+
+    opacity: 1 !important;
+
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    line-height: 20px !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.customer-shared-online,
+.customer-online,
+.profile-online,
+.sidebar-online,
+.online-status {
+    margin: 7px 0 0 !important;
+
+    color:
+        var(
+            --customer-shared-online
+        ) !important;
+
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    line-height: 1.4 !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Shared navigation
+|--------------------------------------------------------------------------
+*/
+
+.customer-shared-menu {
+    margin: 0 !important;
+    padding: 0 0 20px !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 7px !important;
+}
+
+.customer-shared-menu a {
+    width: 100% !important;
+    min-height: 45px !important;
+    margin: 0 !important;
+    padding: 12px 13px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+
+    border:
+        1px solid transparent !important;
+
+    border-radius: 12px !important;
+
+    background: transparent !important;
+    color: #ffffff !important;
+
+    text-decoration: none !important;
+
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    line-height: 1.35 !important;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease !important;
+}
+
+.customer-shared-menu a i {
+    width: 21px !important;
+
+    flex: 0 0 21px !important;
+
+    color: inherit !important;
+
+    text-align: center !important;
+
+    font-size: 15px !important;
+}
+
+.customer-shared-menu a:hover,
+.customer-shared-menu a.active {
+    border-color: #ffffff !important;
+
+    background: #ffffff !important;
+    color:
+        var(
+            --customer-shared-primary
+        ) !important;
+
+    transform: none !important;
+}
+
+.customer-shared-menu
+a[href*="/auth/logout.php"] {
+    margin-top: 10px !important;
+
+    border-color:
+        rgba(
+            255,
+            255,
+            255,
+            0.30
+        ) !important;
+
+    background: transparent !important;
+    color: #ffffff !important;
+}
+
+.customer-shared-menu
+a[href*="/auth/logout.php"]:hover {
+    border-color: #ffffff !important;
+
+    background: #ffffff !important;
+    color:
+        var(
+            --customer-shared-primary
+        ) !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Main page alignment
+|--------------------------------------------------------------------------
+*/
+
+.customer-shared-main,
+.customer-main,
+.profile-main,
+.customer-package-main,
+.customer-packages-main,
+.customer-venue-main,
+.customer-venues-main,
+.customer-gallery-main,
+.customer-booking-main,
+.customer-feedback-main,
+.my-bookings-main {
+    width: auto !important;
+
+    margin-left:
+        var(
+            --customer-shared-sidebar-width
+        ) !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Compact one-line About field
+|--------------------------------------------------------------------------
+*/
+
+.customer-shared-about-field,
+textarea[name="about"]#about {
+    height: 46px !important;
+    min-height: 46px !important;
+    max-height: 46px !important;
+    padding-top: 11px !important;
+    padding-bottom: 11px !important;
+
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+
+    line-height: 22px !important;
+
+    resize: none !important;
+    white-space: nowrap !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Shared View All Gallery top-right customer profile
+|--------------------------------------------------------------------------
+*/
+
+body.all-gallery-page
+.all-gallery-user {
+    min-height: 48px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+
+    color: inherit !important;
+
+    text-align: right !important;
+    text-decoration: none !important;
+}
+
+body.all-gallery-page
+.all-gallery-user > div {
+    min-width: 0 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+}
+
+body.all-gallery-page
+.all-gallery-user strong {
+    margin: 0 !important;
+
+    color: #332e34 !important;
+
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    line-height: 16px !important;
+}
+
+body.all-gallery-page
+.customer-gallery-header-about,
+body.all-gallery-page
+.all-gallery-user span {
+    width: auto !important;
+    max-width: 220px !important;
+    margin: 2px 0 0 !important;
+
+    display: block !important;
+    overflow: hidden !important;
+
+    color: #777078 !important;
+
+    font-size: 10px !important;
+    font-weight: 400 !important;
+    line-height: 14px !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+body.all-gallery-page
+.all-gallery-user img {
+    width: 43px !important;
+    height: 43px !important;
+
+    border:
+        2px solid #ffd5e3 !important;
+
+    border-radius: 50% !important;
+
+    background: #ffffff !important;
+
+    object-fit: cover !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Remove the circular desktop menu button
+|--------------------------------------------------------------------------
+*/
+
+@media (min-width: 901px) {
+    .customer-shared-menu-button,
+    .customer-menu-button,
+    .customer-menu-toggle,
+    .customer-sidebar-button,
+    .mobile-menu-button,
+    .menu-toggle {
+        display: none !important;
+    }
+
+    .customer-shared-sidebar,
+    .customer-sidebar,
+    .profile-sidebar,
+    .customer-package-sidebar,
+    .customer-packages-sidebar,
+    .customer-venue-sidebar,
+    .customer-venues-sidebar,
+    .customer-gallery-sidebar,
+    .customer-booking-sidebar,
+    .customer-feedback-sidebar,
+    .my-bookings-sidebar,
+    aside.sidebar {
+        transform:
+            translateX(0) !important;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Mobile navigation
+|--------------------------------------------------------------------------
+| The sidebar becomes off-canvas and the button becomes a small square.
+*/
+
+@media (max-width: 900px) {
+    .customer-shared-sidebar,
+    .customer-sidebar,
+    .profile-sidebar,
+    .customer-package-sidebar,
+    .customer-packages-sidebar,
+    .customer-venue-sidebar,
+    .customer-venues-sidebar,
+    .customer-gallery-sidebar,
+    .customer-booking-sidebar,
+    .customer-feedback-sidebar,
+    .my-bookings-sidebar,
+    aside.sidebar {
+        width:
+            min(
+                250px,
+                84vw
+            ) !important;
+
+        min-width:
+            min(
+                250px,
+                84vw
+            ) !important;
+
+        max-width:
+            min(
+                250px,
+                84vw
+            ) !important;
+
+        transform:
+            translateX(-100%) !important;
+    }
+
+    .customer-shared-sidebar.open,
+    .customer-sidebar.open,
+    .profile-sidebar.open,
+    .customer-package-sidebar.open,
+    .customer-packages-sidebar.open,
+    .customer-venue-sidebar.open,
+    .customer-venues-sidebar.open,
+    .customer-gallery-sidebar.open,
+    .customer-booking-sidebar.open,
+    .customer-feedback-sidebar.open,
+    .my-bookings-sidebar.open,
+    aside.sidebar.open {
+        transform:
+            translateX(0) !important;
+    }
+
+    .customer-shared-main,
+    .customer-main,
+    .profile-main,
+    .customer-package-main,
+    .customer-packages-main,
+    .customer-venue-main,
+    .customer-venues-main,
+    .customer-gallery-main,
+    .customer-booking-main,
+    .customer-feedback-main,
+    .my-bookings-main {
+        width: 100% !important;
+
+        margin-left: 0 !important;
+    }
+
+    .customer-shared-menu-button,
+    .customer-menu-button,
+    .customer-menu-toggle,
+    .customer-sidebar-button,
+    .mobile-menu-button,
+    .menu-toggle {
+        width: 42px !important;
+        height: 42px !important;
+
+        flex: 0 0 42px !important;
+
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+
+        border: 0 !important;
+        border-radius: 10px !important;
+
+        background:
+            var(
+                --customer-shared-primary
+            ) !important;
+
+        color: #ffffff !important;
+
+        box-shadow:
+            0 3px 12px
+            rgba(
+                164,
+                0,
+                77,
+                0.18
+            ) !important;
+
+        font-size: 17px !important;
+    }
+
+    .customer-shared-overlay.open,
+    .customer-sidebar-overlay.open,
+    .sidebar-overlay.open,
+    .customer-overlay.open {
+        display: block !important;
+    }
+}
+
+@media (max-width: 580px) {
+    body.all-gallery-page
+    .all-gallery-user > div {
+        display: none !important;
+    }
+}

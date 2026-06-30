@@ -1,0 +1,38 @@
+{
+    "id": "./",
+    "name": "Wedding Event Planner",
+    "short_name": "Wedding Planner",
+    "description": "Plan, book and manage wedding events from one application.",
+    "start_url": "./",
+    "scope": "./",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "background_color": "#f8edf2",
+    "theme_color": "#a4004d",
+    "lang": "en",
+    "categories": [
+        "lifestyle",
+        "events",
+        "productivity"
+    ],
+    "icons": [
+        {
+            "src": "./assets/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "./assets/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "./assets/icons/icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

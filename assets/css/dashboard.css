@@ -1,0 +1,84 @@
+* {
+    box-sizing: border-box;
+    font-family: "Segoe UI", sans-serif;
+}
+
+body.dashboard-test-page {
+    min-height: 100vh;
+    margin: 0;
+    padding: 25px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #f8edf2;
+    color: #333333;
+}
+
+.role-dashboard-card {
+    width: 100%;
+    max-width: 640px;
+    padding: 45px;
+
+    border-radius: 24px;
+
+    background: #ffffff;
+
+    text-align: center;
+
+    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.13);
+}
+
+.role-dashboard-icon {
+    width: 82px;
+    height: 82px;
+    margin: 0 auto 20px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background: #f8edf2;
+    color: #a4004d;
+
+    font-size: 34px;
+}
+
+.role-dashboard-card h1 {
+    margin: 0 0 12px;
+    color: #a4004d;
+}
+
+.role-dashboard-card p {
+    color: #666666;
+    line-height: 1.7;
+}
+
+.role-details {
+    margin: 24px 0;
+    padding: 18px;
+
+    border-radius: 14px;
+
+    background: #fff5f8;
+}
+
+.role-details strong {
+    color: #a4004d;
+}
+
+.dashboard-logout {
+    display: inline-block;
+    padding: 13px 25px;
+
+    border-radius: 25px;
+
+    background: #a4004d;
+    color: #ffffff;
+
+    text-decoration: none;
+    font-weight: 700;
+}
