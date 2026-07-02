@@ -378,6 +378,9 @@ $formValues = [
     'status' => 'active',
 ];
 
+$removeMainImageSelected = false;
+$removeSecondImageSelected = false;
+
 /*
 |--------------------------------------------------------------------------
 | Local Gallery path helpers
@@ -704,7 +707,11 @@ if (is_post()) {
                 ? 'active'
                 : 'inactive';
 
-        $removeSecondImage =
+        $removeMainImageSelected =
+            isset($_POST['remove_image'])
+            && (string) $_POST['remove_image'] === '1';
+
+        $removeSecondImageSelected =
             isset($_POST['remove_image_two'])
             && (string) $_POST['remove_image_two'] === '1';
 
@@ -804,6 +811,12 @@ if (is_post()) {
                 if ($newMainImage !== null) {
                     $currentMainImage =
                         $newMainImage;
+
+                    /*
+                     * A newly selected first image
+                     * takes priority over removal.
+                     */
+                    $removeMainImageSelected = false;
                 }
             } catch (Throwable $exception) {
                 $errors[] =
@@ -835,7 +848,7 @@ if (is_post()) {
                      * A newly selected second image
                      * takes priority over removal.
                      */
-                    $removeSecondImage = false;
+                    $removeSecondImageSelected = false;
                 }
             } catch (Throwable $exception) {
                 $errors[] =
@@ -845,10 +858,48 @@ if (is_post()) {
 
         if (
             $action === 'update'
-            && $removeSecondImage
+            && $removeMainImageSelected
+            && !$hasNewMainImage
+        ) {
+            $currentMainImage = null;
+        }
+
+        if (
+            $action === 'update'
+            && $removeSecondImageSelected
             && !$hasNewSecondImage
         ) {
             $currentSecondImage = null;
+        }
+
+        $currentMainImage =
+            trim((string) $currentMainImage) !== ''
+                ? (string) $currentMainImage
+                : null;
+
+        $currentSecondImage =
+            trim((string) $currentSecondImage) !== ''
+                ? (string) $currentSecondImage
+                : null;
+
+        /*
+         * A Gallery record must always keep one image.
+         * When the first image is removed while the second
+         * image remains, promote the second image to first.
+         */
+        if (
+            $currentMainImage === null
+            && $currentSecondImage !== null
+        ) {
+            $currentMainImage =
+                $currentSecondImage;
+
+            $currentSecondImage = null;
+        }
+
+        if ($currentMainImage === null) {
+            $errors[] =
+                'At least one Gallery image must remain. Upload a replacement image before removing both current images.';
         }
 
         if ($errors === []) {
@@ -914,37 +965,72 @@ if (is_post()) {
 
                 $connection->commit();
 
-                if (
-                    $action === 'update'
-                    && $newMainImage !== null
-                    && !empty($oldMainImage)
-                    && $oldMainImage !== $newMainImage
-                ) {
-                    delete_gallery_image(
-                        (string) $oldMainImage
-                    );
-                }
+                if ($action === 'update') {
+                    $oldImagePaths = [];
+                    $finalImagePaths = [];
 
-                if (
-                    $action === 'update'
-                    && $newSecondImage !== null
-                    && !empty($oldSecondImage)
-                    && $oldSecondImage !== $newSecondImage
-                ) {
-                    delete_gallery_image(
-                        (string) $oldSecondImage
-                    );
-                }
+                    foreach (
+                        [
+                            $oldMainImage,
+                            $oldSecondImage,
+                        ] as $oldImagePath
+                    ) {
+                        $oldImagePath = trim(
+                            (string) $oldImagePath
+                        );
 
-                if (
-                    $action === 'update'
-                    && $removeSecondImage
-                    && !$hasNewSecondImage
-                    && !empty($oldSecondImage)
-                ) {
-                    delete_gallery_image(
-                        (string) $oldSecondImage
-                    );
+                        if (
+                            $oldImagePath !== ''
+                            && !in_array(
+                                $oldImagePath,
+                                $oldImagePaths,
+                                true
+                            )
+                        ) {
+                            $oldImagePaths[] =
+                                $oldImagePath;
+                        }
+                    }
+
+                    foreach (
+                        [
+                            $currentMainImage,
+                            $currentSecondImage,
+                        ] as $finalImagePath
+                    ) {
+                        $finalImagePath = trim(
+                            (string) $finalImagePath
+                        );
+
+                        if (
+                            $finalImagePath !== ''
+                            && !in_array(
+                                $finalImagePath,
+                                $finalImagePaths,
+                                true
+                            )
+                        ) {
+                            $finalImagePaths[] =
+                                $finalImagePath;
+                        }
+                    }
+
+                    foreach (
+                        $oldImagePaths
+                        as $oldImagePath
+                    ) {
+                        if (
+                            !in_array(
+                                $oldImagePath,
+                                $finalImagePaths,
+                                true
+                            )
+                        ) {
+                            delete_gallery_image(
+                                $oldImagePath
+                            );
+                        }
+                    }
                 }
 
                 set_flash(
@@ -2068,7 +2154,7 @@ $currentYear = date('Y');
 
                     <p>
                         <?= $editingGalleryItem
-                            ? 'Update details, replace an image or remove the optional second image.'
+                            ? 'Update details, replace images or remove a current image.'
                             : 'Upload one required image and an optional second image.' ?>
                     </p>
 
@@ -2134,13 +2220,6 @@ $currentYear = date('Y');
                         type="hidden"
                         name="return_to"
                         value="<?= e($returnTo) ?>"
-                    >
-
-                    <input
-                        type="hidden"
-                        id="removeImageTwo"
-                        name="remove_image_two"
-                        value="0"
                     >
 
                     <div class="gallery-form-grid">
@@ -2236,7 +2315,10 @@ $currentYear = date('Y');
                                 JPG, PNG or WEBP, maximum 5 MB.
                             </p>
 
-                            <div class="gallery-current-image">
+                            <div
+                                class="gallery-current-image"
+                                id="galleryMainPreviewBox"
+                            >
 
                                 <img
                                     id="galleryMainPreview"
@@ -2248,16 +2330,54 @@ $currentYear = date('Y');
                                             ?? null
                                         )
                                     ) ?>"
+                                    data-original-src="<?= e(
+                                        gallery_image_url(
+                                            $editingGalleryItem[
+                                                'image'
+                                            ]
+                                            ?? null
+                                        )
+                                    ) ?>"
                                     alt="First Gallery image preview"
                                 >
 
-                                <span>
+                                <span id="galleryMainPreviewLabel">
                                     <?= $editingGalleryItem
                                         ? 'Current first image'
                                         : 'First image preview' ?>
                                 </span>
 
                             </div>
+
+                            <?php if (
+                                $editingGalleryItem
+                                && !empty(
+                                    $editingGalleryItem[
+                                        'image'
+                                    ]
+                                )
+                            ): ?>
+
+                                <label
+                                    class="gallery-remove-image-option"
+                                    for="removeMainImageCheckbox"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        id="removeMainImageCheckbox"
+                                        name="remove_image"
+                                        value="1"
+                                        <?= $removeMainImageSelected
+                                            ? 'checked'
+                                            : '' ?>
+                                    >
+
+                                    <span>
+                                        Remove current image
+                                    </span>
+                                </label>
+
+                            <?php endif; ?>
 
                         </div>
 
@@ -2304,6 +2424,14 @@ $currentYear = date('Y');
                                             ?? null
                                         )
                                     ) ?>"
+                                    data-original-src="<?= e(
+                                        gallery_image_url(
+                                            $editingGalleryItem[
+                                                'image_two'
+                                            ]
+                                            ?? null
+                                        )
+                                    ) ?>"
                                     alt="Second Gallery image preview"
                                 >
 
@@ -2328,14 +2456,24 @@ $currentYear = date('Y');
                                 )
                             ): ?>
 
-                                <button
-                                    class="gallery-remove-second-button"
-                                    id="removeSecondImageButton"
-                                    type="button"
+                                <label
+                                    class="gallery-remove-image-option"
+                                    for="removeSecondImageCheckbox"
                                 >
-                                    <i class="fa-solid fa-image-slash"></i>
-                                    Remove Second Image
-                                </button>
+                                    <input
+                                        type="checkbox"
+                                        id="removeSecondImageCheckbox"
+                                        name="remove_image_two"
+                                        value="1"
+                                        <?= $removeSecondImageSelected
+                                            ? 'checked'
+                                            : '' ?>
+                                    >
+
+                                    <span>
+                                        Remove current image
+                                    </span>
+                                </label>
 
                             <?php endif; ?>
 
@@ -2665,20 +2803,30 @@ $currentYear = date('Y');
                                         "New selected image";
                                 }
 
-                                if (
+                                const removalCheckboxId =
                                     input.id
-                                    === "gallerySecondImage"
-                                ) {
-                                    const removeInput =
-                                        document.getElementById(
-                                            "removeImageTwo"
-                                        );
+                                    === "galleryMainImage"
+                                        ? "removeMainImageCheckbox"
+                                        : input.id
+                                            === "gallerySecondImage"
+                                            ? "removeSecondImageCheckbox"
+                                            : "";
 
-                                    if (removeInput) {
-                                        removeInput.value =
-                                            "0";
-                                    }
+                                const removalCheckbox =
+                                    removalCheckboxId !== ""
+                                        ? document.getElementById(
+                                            removalCheckboxId
+                                        )
+                                        : null;
+
+                                if (removalCheckbox) {
+                                    removalCheckbox.checked =
+                                        false;
                                 }
+
+                                previewBox?.classList.remove(
+                                    "marked-for-removal"
+                                );
                             }
                         );
 
@@ -2691,80 +2839,130 @@ $currentYear = date('Y');
 
         /*
         |--------------------------------------------------------------------------
-        | Remove optional second image
+        | Remove current Gallery images
         |--------------------------------------------------------------------------
         */
 
-        const removeSecondImageButton =
-            document.getElementById(
-                "removeSecondImageButton"
-            );
+        const galleryImageRemovalControls = [
+            {
+                checkbox:
+                    document.getElementById(
+                        "removeMainImageCheckbox"
+                    ),
 
-        const removeImageTwo =
-            document.getElementById(
-                "removeImageTwo"
-            );
+                fileInput:
+                    document.getElementById(
+                        "galleryMainImage"
+                    ),
 
-        const gallerySecondPreviewBox =
-            document.getElementById(
-                "gallerySecondPreviewBox"
-            );
+                previewBox:
+                    document.getElementById(
+                        "galleryMainPreviewBox"
+                    ),
 
-        const gallerySecondPreviewLabel =
-            document.getElementById(
-                "gallerySecondPreviewLabel"
-            );
+                previewImage:
+                    document.getElementById(
+                        "galleryMainPreview"
+                    ),
 
-        const gallerySecondImage =
-            document.getElementById(
-                "gallerySecondImage"
-            );
+                previewLabel:
+                    document.getElementById(
+                        "galleryMainPreviewLabel"
+                    ),
 
-        removeSecondImageButton?.addEventListener(
-            "click",
-            function () {
-                if (!removeImageTwo) {
-                    return;
-                }
+                currentLabel:
+                    "Current first image"
+            },
+            {
+                checkbox:
+                    document.getElementById(
+                        "removeSecondImageCheckbox"
+                    ),
 
-                const isMarkedForRemoval =
-                    removeImageTwo.value === "1";
+                fileInput:
+                    document.getElementById(
+                        "gallerySecondImage"
+                    ),
 
-                if (isMarkedForRemoval) {
-                    removeImageTwo.value = "0";
+                previewBox:
+                    document.getElementById(
+                        "gallerySecondPreviewBox"
+                    ),
 
-                    removeSecondImageButton.innerHTML =
-                        '<i class="fa-solid fa-image-slash"></i> Remove Second Image';
+                previewImage:
+                    document.getElementById(
+                        "gallerySecondPreview"
+                    ),
 
-                    gallerySecondPreviewBox?.classList.remove(
+                previewLabel:
+                    document.getElementById(
+                        "gallerySecondPreviewLabel"
+                    ),
+
+                currentLabel:
+                    "Current second image"
+            }
+        ];
+
+        galleryImageRemovalControls.forEach(
+            function (control) {
+                control.checkbox?.addEventListener(
+                    "change",
+                    function () {
+                        if (
+                            control.checkbox.checked
+                        ) {
+                            if (control.fileInput) {
+                                control.fileInput.value =
+                                    "";
+                            }
+
+                            if (
+                                control.previewImage
+                                && control.previewImage.dataset.originalSrc
+                            ) {
+                                control.previewImage.src =
+                                    control.previewImage.dataset.originalSrc;
+                            }
+
+                            control.previewBox?.classList.add(
+                                "marked-for-removal"
+                            );
+
+                            if (control.previewLabel) {
+                                control.previewLabel.textContent =
+                                    "This image will be removed after update";
+                            }
+                        } else {
+                            control.previewBox?.classList.remove(
+                                "marked-for-removal"
+                            );
+
+                            if (
+                                control.previewImage
+                                && control.previewImage.dataset.originalSrc
+                            ) {
+                                control.previewImage.src =
+                                    control.previewImage.dataset.originalSrc;
+                            }
+
+                            if (control.previewLabel) {
+                                control.previewLabel.textContent =
+                                    control.currentLabel;
+                            }
+                        }
+                    }
+                );
+
+                if (
+                    control.checkbox?.checked
+                ) {
+                    control.previewBox?.classList.add(
                         "marked-for-removal"
                     );
 
-                    if (
-                        gallerySecondPreviewLabel
-                    ) {
-                        gallerySecondPreviewLabel.textContent =
-                            "Current second image";
-                    }
-                } else {
-                    removeImageTwo.value = "1";
-
-                    if (gallerySecondImage) {
-                        gallerySecondImage.value =
-                            "";
-                    }
-
-                    removeSecondImageButton.innerHTML =
-                        '<i class="fa-solid fa-arrow-rotate-left"></i> Keep Second Image';
-
-                    gallerySecondPreviewBox?.classList.add(
-                        "marked-for-removal"
-                    );
-
-                    if (
-                        gallerySecondPreviewLabel
-                    ) {
-                        gallerySecondPreviewLabel.textContent =
+                    if (control.previewLabel) {
+                        control.previewLabel.textContent =
                             "This image will be removed after update";
                     }
                 }

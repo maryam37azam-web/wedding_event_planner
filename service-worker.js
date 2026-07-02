@@ -1,19 +1,13 @@
 "use strict";
 
-/*
-|--------------------------------------------------------------------------
-| Wedding Event Planner Service Worker
-|--------------------------------------------------------------------------
-| Public static assets are cached for faster loading.
-| Authentication and dashboard page responses are not cached.
-*/
+const CACHE_VERSION =
+    "wedding-planner-v115";
 
-const CACHE_VERSION = "wedding-planner-v88";
-
-const BASE_PATH = self.location.pathname.replace(
-    /\/service-worker\.js$/,
-    ""
-);
+const BASE_PATH =
+    self.location.pathname.replace(
+        /\/service-worker\.js$/,
+        ""
+    );
 
 const OFFLINE_PAGE =
     `${BASE_PATH}/offline.php`;
@@ -35,6 +29,7 @@ const STATIC_FILES = [
     `${BASE_PATH}/assets/css/admin_bookings.css`,
     `${BASE_PATH}/assets/css/admin_gallery.css`,
     `${BASE_PATH}/assets/css/admin_feedback.css`,
+    `${BASE_PATH}/assets/css/admin_card_pricing.css`,
 
     `${BASE_PATH}/assets/css/event_manager_consistency.css`,
     `${BASE_PATH}/assets/css/event_manager_dashboard.css`,
@@ -74,8 +69,10 @@ const STATIC_FILES = [
     `${BASE_PATH}/assets/css/all_venues.css`,
     `${BASE_PATH}/assets/css/notifications.css`,
     `${BASE_PATH}/assets/css/public_home.css`,
+    `${BASE_PATH}/assets/css/sidebar_brand_fancy.css`,
 
     `${BASE_PATH}/assets/images/elegant_wedding_reception_in_grand_hall.png`,
+    `${BASE_PATH}/assets/images/pink_wedding_hero.png`,
 
     `${BASE_PATH}/assets/js/main.js`,
     `${BASE_PATH}/assets/js/pwa.js`,
@@ -85,6 +82,9 @@ const STATIC_FILES = [
     `${BASE_PATH}/assets/js/booking_manager_consistency.js`,
     `${BASE_PATH}/assets/js/customer_consistency.js`,
     `${BASE_PATH}/assets/js/customer_gallery_view.js`,
+    `${BASE_PATH}/assets/js/view_all_back_button.js`,
+    `${BASE_PATH}/assets/js/image_file_clear.js`,
+    `${BASE_PATH}/assets/js/booking_manager_packages.js`,
 
     `${BASE_PATH}/assets/icons/icon-192.png`,
     `${BASE_PATH}/assets/icons/icon-512.png`,
@@ -92,35 +92,29 @@ const STATIC_FILES = [
     `${BASE_PATH}/assets/icons/apple-touch-icon.png`
 ];
 
-/*
-|--------------------------------------------------------------------------
-| Install service worker
-|--------------------------------------------------------------------------
-*/
-
 self.addEventListener(
     "install",
     function (event) {
         event.waitUntil(
             caches
-                .open(CACHE_VERSION)
-                .then(function (cache) {
-                    return cache.addAll(
-                        STATIC_FILES
-                    );
-                })
-                .then(function () {
-                    return self.skipWaiting();
-                })
+                .open(
+                    CACHE_VERSION
+                )
+                .then(
+                    function (cache) {
+                        return cache.addAll(
+                            STATIC_FILES
+                        );
+                    }
+                )
+                .then(
+                    function () {
+                        return self.skipWaiting();
+                    }
+                )
         );
     }
 );
-
-/*
-|--------------------------------------------------------------------------
-| Activate service worker
-|--------------------------------------------------------------------------
-*/
 
 self.addEventListener(
     "activate",
@@ -128,38 +122,42 @@ self.addEventListener(
         event.waitUntil(
             caches
                 .keys()
-                .then(function (cacheNames) {
-                    return Promise.all(
+                .then(
+                    function (
                         cacheNames
-                            .filter(
-                                function (cacheName) {
-                                    return (
+                    ) {
+                        return Promise.all(
+                            cacheNames
+                                .filter(
+                                    function (
                                         cacheName
-                                        !== CACHE_VERSION
-                                    );
-                                }
-                            )
-                            .map(
-                                function (cacheName) {
-                                    return caches.delete(
+                                    ) {
+                                        return (
+                                            cacheName
+                                            !== CACHE_VERSION
+                                        );
+                                    }
+                                )
+                                .map(
+                                    function (
                                         cacheName
-                                    );
-                                }
-                            )
-                    );
-                })
-                .then(function () {
-                    return self.clients.claim();
-                })
+                                    ) {
+                                        return caches.delete(
+                                            cacheName
+                                        );
+                                    }
+                                )
+                        );
+                    }
+                )
+                .then(
+                    function () {
+                        return self.clients.claim();
+                    }
+                )
         );
     }
 );
-
-/*
-|--------------------------------------------------------------------------
-| Handle network requests
-|--------------------------------------------------------------------------
-*/
 
 self.addEventListener(
     "fetch",
@@ -167,12 +165,17 @@ self.addEventListener(
         const request =
             event.request;
 
-        if (request.method !== "GET") {
+        if (
+            request.method
+            !== "GET"
+        ) {
             return;
         }
 
         const requestUrl =
-            new URL(request.url);
+            new URL(
+                request.url
+            );
 
         if (
             requestUrl.origin
@@ -181,9 +184,14 @@ self.addEventListener(
             return;
         }
 
-        if (request.mode === "navigate") {
+        if (
+            request.mode
+            === "navigate"
+        ) {
             event.respondWith(
-                fetch(request).catch(
+                fetch(
+                    request
+                ).catch(
                     function () {
                         return caches.match(
                             OFFLINE_PAGE
@@ -213,38 +221,61 @@ self.addEventListener(
 
         event.respondWith(
             caches
-                .match(request)
-                .then(function (cachedResponse) {
-                    if (cachedResponse) {
-                        return cachedResponse;
-                    }
+                .match(
+                    request
+                )
+                .then(
+                    function (
+                        cachedResponse
+                    ) {
+                        if (
+                            cachedResponse
+                        ) {
+                            return cachedResponse;
+                        }
 
-                    return fetch(request).then(
-                        function (networkResponse) {
-                            if (
-                                !networkResponse
-                                || networkResponse.status !== 200
-                                || networkResponse.type !== "basic"
+                        return fetch(
+                            request
+                        ).then(
+                            function (
+                                networkResponse
                             ) {
+                                if (
+                                    !networkResponse
+                                    || networkResponse
+                                        .status
+                                        !== 200
+                                    || networkResponse
+                                        .type
+                                        !== "basic"
+                                ) {
+                                    return networkResponse;
+                                }
+
+                                const responseCopy =
+                                    networkResponse
+                                        .clone();
+
+                                caches
+                                    .open(
+                                        CACHE_VERSION
+                                    )
+                                    .then(
+                                        function (
+                                            cache
+                                        ) {
+                                            cache.put(
+                                                request,
+                                                responseCopy
+                                            );
+                                        }
+                                    );
+
                                 return networkResponse;
                             }
-
-                            const responseCopy =
-                                networkResponse.clone();
-
-                            caches
-                                .open(CACHE_VERSION)
-                                .then(function (cache) {
-                                    cache.put(
-                                        request,
-                                        responseCopy
-                                    );
-                                });
-
-                            return networkResponse;
-                        }
-                    );
-                })
+                        );
+                    }
+                )
         );
     }
 );

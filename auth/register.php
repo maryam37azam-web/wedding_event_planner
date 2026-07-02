@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/functions.php';
-require_once __DIR__ . '/../includes/send_otp.php';
 
 $errors = [];
 
@@ -13,22 +12,42 @@ $email = '';
 $phone = '';
 
 if (is_post()) {
-    $fullName = trim((string) ($_POST['full_name'] ?? ''));
-
-    $email = strtolower(
-        trim((string) ($_POST['email'] ?? ''))
+    $fullName = trim(
+        (string) (
+            $_POST['full_name']
+            ?? ''
+        )
     );
 
-    $phone = trim((string) ($_POST['phone'] ?? ''));
+    $email = strtolower(
+        trim(
+            (string) (
+                $_POST['email']
+                ?? ''
+            )
+        )
+    );
 
-    $password = (string) ($_POST['password'] ?? '');
+    $phone = trim(
+        (string) (
+            $_POST['phone']
+            ?? ''
+        )
+    );
+
+    $password = (string) (
+        $_POST['password']
+        ?? ''
+    );
 
     $confirmPassword = (string) (
-        $_POST['confirm_password'] ?? ''
+        $_POST['confirm_password']
+        ?? ''
     );
 
     $submittedToken = (string) (
-        $_POST['csrf_token'] ?? ''
+        $_POST['csrf_token']
+        ?? ''
     );
 
     if (!verify_csrf($submittedToken)) {
@@ -44,15 +63,25 @@ if (is_post()) {
             'Full name must be between 3 and 120 characters.';
     }
 
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = 'Enter a valid email address.';
+    if (
+        !filter_var(
+            $email,
+            FILTER_VALIDATE_EMAIL
+        )
+    ) {
+        $errors[] =
+            'Enter a valid email address.';
     }
 
     if (
         $phone !== ''
-        && !preg_match('/^[0-9+\-\s()]{7,30}$/', $phone)
+        && !preg_match(
+            '/^[0-9+\-\s()]{7,30}$/',
+            $phone
+        )
     ) {
-        $errors[] = 'Enter a valid phone number.';
+        $errors[] =
+            'Enter a valid phone number.';
     }
 
     if (strlen($password) < 8) {
@@ -61,132 +90,201 @@ if (is_post()) {
     }
 
     if (
-        !preg_match('/[A-Za-z]/', $password)
-        || !preg_match('/[0-9]/', $password)
+        !preg_match(
+            '/[A-Za-z]/',
+            $password
+        )
+        || !preg_match(
+            '/[0-9]/',
+            $password
+        )
     ) {
         $errors[] =
             'Password must contain at least one letter and one number.';
     }
 
-    if ($password !== $confirmPassword) {
-        $errors[] = 'Password confirmation does not match.';
+    if (
+        $password
+        !== $confirmPassword
+    ) {
+        $errors[] =
+            'Password confirmation does not match.';
     }
 
     if ($errors === []) {
         $connection = db();
 
         try {
-            $existingStatement = $connection->prepare(
-                'SELECT id, role, is_verified
-                 FROM users
-                 WHERE email = ?
-                 LIMIT 1'
-            );
+            $existingStatement =
+                $connection->prepare(
+                    'SELECT
+                        id,
+                        role,
+                        is_verified
+                     FROM users
+                     WHERE email = ?
+                     LIMIT 1'
+                );
 
-            $existingStatement->execute([$email]);
+            $existingStatement->execute([
+                $email,
+            ]);
 
-            $existingUser = $existingStatement->fetch();
+            $existingUser =
+                $existingStatement->fetch();
 
             if (
                 $existingUser
-                && $existingUser['role'] !== 'customer'
+                && $existingUser['role']
+                    !== 'customer'
             ) {
                 $errors[] =
                     'This email is already assigned to a staff account.';
             } elseif (
                 $existingUser
-                && (int) $existingUser['is_verified'] === 1
+                && (int) $existingUser[
+                    'is_verified'
+                ] === 1
             ) {
                 $errors[] =
                     'An account with this email already exists.';
             } else {
-                $connection->beginTransaction();
+                $connection
+                    ->beginTransaction();
 
-                $passwordHash = password_hash(
-                    $password,
-                    PASSWORD_DEFAULT
-                );
+                $passwordHash =
+                    password_hash(
+                        $password,
+                        PASSWORD_DEFAULT
+                    );
 
                 if ($existingUser) {
-                    $userId = (int) $existingUser['id'];
-
-                    $updateStatement = $connection->prepare(
-                        'UPDATE users
-                         SET full_name = ?,
-                             phone = ?,
-                             password = ?,
-                             is_active = 1
-                         WHERE id = ?'
+                    $userId = (int) (
+                        $existingUser['id']
                     );
+
+                    $updateStatement =
+                        $connection->prepare(
+                            'UPDATE users
+                             SET full_name = ?,
+                                 phone = ?,
+                                 password = ?,
+                                 is_verified = 1,
+                                 email_verified_at = NOW(),
+                                 is_active = 1
+                             WHERE id = ?'
+                        );
 
                     $updateStatement->execute([
                         $fullName,
-                        $phone !== '' ? $phone : null,
+
+                        $phone !== ''
+                            ? $phone
+                            : null,
+
                         $passwordHash,
                         $userId,
                     ]);
                 } else {
-                    $insertStatement = $connection->prepare(
-                        'INSERT INTO users (
-                            full_name,
-                            email,
-                            phone,
-                            password,
-                            role,
-                            is_verified,
-                            is_active
-                         ) VALUES (?, ?, ?, ?, ?, 0, 1)'
-                    );
+                    $insertStatement =
+                        $connection->prepare(
+                            'INSERT INTO users (
+                                full_name,
+                                email,
+                                phone,
+                                password,
+                                role,
+                                is_verified,
+                                email_verified_at,
+                                is_active
+                             ) VALUES (
+                                ?,
+                                ?,
+                                ?,
+                                ?,
+                                ?,
+                                1,
+                                NOW(),
+                                1
+                             )'
+                        );
 
                     $insertStatement->execute([
                         $fullName,
                         $email,
-                        $phone !== '' ? $phone : null,
+
+                        $phone !== ''
+                            ? $phone
+                            : null,
+
                         $passwordHash,
                         'customer',
                     ]);
 
-                    $userId = (int) $connection->lastInsertId();
+                    $userId = (int) (
+                        $connection
+                            ->lastInsertId()
+                    );
                 }
+
+                /*
+                 * Close any old registration OTP
+                 * records created before verification
+                 * was removed from customer registration.
+                 */
+                $disableOtpStatement =
+                    $connection->prepare(
+                        "UPDATE otp_codes
+                         SET used_at = NOW()
+                         WHERE user_id = ?
+                         AND purpose = 'email_verification'
+                         AND used_at IS NULL"
+                    );
+
+                $disableOtpStatement->execute([
+                    $userId,
+                ]);
 
                 $connection->commit();
 
-                $sendResult = send_email_verification_otp(
-                    $userId,
-                    $email,
-                    $fullName
+                unset(
+                    $_SESSION[
+                        'pending_verification_user_id'
+                    ],
+                    $_SESSION[
+                        'pending_verification_email'
+                    ],
+                    $_SESSION[
+                        'otp_last_sent_at'
+                    ],
+                    $_SESSION[
+                        'recently_verified_email'
+                    ]
                 );
 
-                if ($sendResult['success']) {
-                    $_SESSION['pending_verification_user_id']
-                        = $userId;
+                set_flash(
+                    'success',
+                    'Your customer account has been created successfully. You can now log in.'
+                );
 
-                    $_SESSION['pending_verification_email']
-                        = $email;
-
-                    $_SESSION['otp_last_sent_at'] = time();
-
-                    set_flash(
-                        'success',
-                        'A six-digit verification code was sent to your email.'
-                    );
-
-                    redirect('/auth/verify_otp.php');
-                }
-
-                $errors[] = $sendResult['message'];
+                redirect(
+                    '/auth/customer_login.php'
+                );
             }
         } catch (Throwable $exception) {
             if (
                 isset($connection)
-                && $connection->inTransaction()
+                && $connection
+                    ->inTransaction()
             ) {
-                $connection->rollBack();
+                $connection
+                    ->rollBack();
             }
 
             $errors[] = APP_DEBUG
                 ? 'Registration failed: '
-                    . $exception->getMessage()
+                    . $exception
+                        ->getMessage()
                 : 'Registration failed. Please try again.';
         }
     }
@@ -202,7 +300,10 @@ if (is_post()) {
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>Create Account | <?= e(APP_NAME) ?></title>
+    <title>
+        Create Account | <?= e(APP_NAME) ?>
+    </title>
+
     <?php require __DIR__ . '/../includes/pwa_head.php'; ?>
 
     <link
@@ -212,7 +313,11 @@ if (is_post()) {
 
     <link
         rel="stylesheet"
-        href="<?= e(url('/assets/css/auth.css')) ?>"
+        href="<?= e(
+            url(
+                '/assets/css/auth.css'
+            )
+        ) ?>"
     >
 </head>
 
@@ -233,22 +338,38 @@ if (is_post()) {
         </div>
 
         <?php if ($errors !== []): ?>
+
             <div class="alert alert-danger">
+
                 <ul>
-                    <?php foreach ($errors as $error): ?>
-                        <li><?= e($error) ?></li>
+
+                    <?php foreach (
+                        $errors as $error
+                    ): ?>
+
+                        <li>
+                            <?= e($error) ?>
+                        </li>
+
                     <?php endforeach; ?>
+
                 </ul>
+
             </div>
+
         <?php endif; ?>
 
-        <form method="post" autocomplete="on">
+        <form
+            method="post"
+            autocomplete="on"
+        >
 
             <?= csrf_field() ?>
 
             <div class="form-grid">
 
                 <div class="input-box full-width">
+
                     <i class="fa-solid fa-user"></i>
 
                     <input
@@ -261,9 +382,11 @@ if (is_post()) {
                         autocomplete="name"
                         required
                     >
+
                 </div>
 
                 <div class="input-box">
+
                     <i class="fa-solid fa-envelope"></i>
 
                     <input
@@ -276,9 +399,11 @@ if (is_post()) {
                         autocomplete="email"
                         required
                     >
+
                 </div>
 
                 <div class="input-box">
+
                     <i class="fa-solid fa-phone"></i>
 
                     <input
@@ -290,9 +415,11 @@ if (is_post()) {
                         maxlength="30"
                         autocomplete="tel"
                     >
+
                 </div>
 
                 <div class="input-box">
+
                     <i class="fa-solid fa-lock"></i>
 
                     <input
@@ -312,9 +439,11 @@ if (is_post()) {
                     >
                         Show
                     </button>
+
                 </div>
 
                 <div class="input-box">
+
                     <i class="fa-solid fa-lock"></i>
 
                     <input
@@ -334,58 +463,88 @@ if (is_post()) {
                     >
                         Show
                     </button>
+
                 </div>
 
             </div>
 
-            <button class="auth-button" type="submit">
+            <button
+                class="auth-button"
+                type="submit"
+            >
                 Create Account
             </button>
 
         </form>
 
         <div class="auth-footer">
+
             Already have a customer account?<br>
 
-            <a href="<?= e(url('/auth/customer_login.php')) ?>">
+            <a
+                href="<?= e(
+                    url(
+                        '/auth/customer_login.php'
+                    )
+                ) ?>"
+            >
                 Login Here
             </a>
 
             <br>
 
-            <a href="<?= e(url('/')) ?>">
+            <a
+                href="<?= e(
+                    url('/')
+                ) ?>"
+            >
                 Return to Website
             </a>
+
         </div>
 
     </main>
 
     <script>
         document
-            .querySelectorAll("[data-password-target]")
-            .forEach(function (button) {
-                button.addEventListener("click", function () {
-                    const field = document.getElementById(
-                        button.dataset.passwordTarget
+            .querySelectorAll(
+                "[data-password-target]"
+            )
+            .forEach(
+                function (button) {
+                    button.addEventListener(
+                        "click",
+                        function () {
+                            const field =
+                                document.getElementById(
+                                    button.dataset
+                                        .passwordTarget
+                                );
+
+                            if (!field) {
+                                return;
+                            }
+
+                            const passwordIsHidden =
+                                field.type
+                                === "password";
+
+                            field.type =
+                                passwordIsHidden
+                                    ? "text"
+                                    : "password";
+
+                            button.textContent =
+                                passwordIsHidden
+                                    ? "Hide"
+                                    : "Show";
+                        }
                     );
-
-                    if (!field) {
-                        return;
-                    }
-
-                    const passwordIsHidden =
-                        field.type === "password";
-
-                    field.type = passwordIsHidden
-                        ? "text"
-                        : "password";
-
-                    button.textContent = passwordIsHidden
-                        ? "Hide"
-                        : "Show";
-                });
-            });
+                }
+            );
     </script>
-<?php require __DIR__ . '/../includes/pwa_scripts.php'; ?>
+
+    <?php require __DIR__ . '/../includes/pwa_scripts.php'; ?>
+
 </body>
 </html>

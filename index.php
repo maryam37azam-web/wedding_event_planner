@@ -10,17 +10,13 @@ require_once __DIR__ . '/includes/gallery_helpers.php';
 
 $connection = db();
 
-/*
-|--------------------------------------------------------------------------
-| Current visitor links
-|--------------------------------------------------------------------------
-*/
-
 $currentRole = (string) (
     $_SESSION['role'] ?? ''
 );
 
-$isLoggedIn = isset($_SESSION['user_id']);
+$isLoggedIn = isset(
+    $_SESSION['user_id']
+);
 
 $accountPath = match ($currentRole) {
     'admin' =>
@@ -46,12 +42,6 @@ $accountLabel = $isLoggedIn
 $bookingPath = $currentRole === 'customer'
     ? '/customer/booking.php'
     : '/auth/customer_login.php';
-
-/*
-|--------------------------------------------------------------------------
-| Public website data
-|--------------------------------------------------------------------------
-*/
 
 $packages = $connection
     ->query(
@@ -88,10 +78,9 @@ $services = $connection
     ->fetchAll();
 
 $showAllGallery =
-    isset($_GET['gallery'])
-    && $_GET['gallery'] === 'all';
+    ($_GET['gallery'] ?? '') === 'all';
 
-$galleryQuery =
+$gallerySql =
     "SELECT
         id,
         title,
@@ -104,24 +93,66 @@ $galleryQuery =
      ORDER BY created_at DESC";
 
 if (!$showAllGallery) {
-    $galleryQuery .= ' LIMIT 8';
+    $gallerySql .= ' LIMIT 8';
 }
 
 $galleryImages = $connection
-    ->query($galleryQuery)
+    ->query($gallerySql)
     ->fetchAll();
 
-/*
-|--------------------------------------------------------------------------
-| Hero background
-|--------------------------------------------------------------------------
-*/
-
 $heroImage = url(
-    '/assets/images/elegant_wedding_reception_in_grand_hall.png'
+    '/assets/images/pink_wedding_hero.png'
 );
 
 $currentYear = date('Y');
+
+function public_json(
+    array $value
+): string {
+    $json = json_encode(
+        $value,
+        JSON_UNESCAPED_SLASHES
+        | JSON_HEX_TAG
+        | JSON_HEX_AMP
+        | JSON_HEX_APOS
+        | JSON_HEX_QUOT
+    );
+
+    return is_string($json)
+        ? $json
+        : '[]';
+}
+
+function public_package_music(
+    array $package
+): string {
+    $music = [];
+
+    if (
+        (int) (
+            $package['basic_music']
+            ?? 0
+        ) === 1
+    ) {
+        $music[] = 'Basic Music';
+    }
+
+    if (
+        (int) (
+            $package['live_music']
+            ?? 0
+        ) === 1
+    ) {
+        $music[] = 'Live Music';
+    }
+
+    return $music === []
+        ? 'Music not included'
+        : implode(
+            ' and ',
+            $music
+        );
+}
 
 ?>
 <!DOCTYPE html>
@@ -139,6 +170,22 @@ $currentYear = date('Y');
     <?php require __DIR__ . '/includes/pwa_head.php'; ?>
 
     <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com"
+    >
+
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    >
+
+    <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Great+Vibes&family=Poppins:wght@400;500;600;700&display=swap"
+    >
+
+    <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
     >
@@ -146,29 +193,40 @@ $currentYear = date('Y');
     <link
         rel="stylesheet"
         href="<?= e(
-            url('/assets/css/public_home.css?v=65')
+            url(
+                '/assets/css/public_home.css?v=66'
+            )
         ) ?>"
     >
 </head>
 
 <body class="public-home-page">
 
-    <nav class="public-navbar">
+    <nav
+        class="public-navbar"
+        id="publicNavbar"
+    >
 
         <a
             class="public-logo"
-            href="<?= e(url('/index.php')) ?>"
+            href="<?= e(
+                url('/index.php')
+            ) ?>"
         >
             <img
                 src="<?= e(
-                    url('/assets/icons/icon-192.png')
+                    url(
+                        '/assets/icons/icon-192.png'
+                    )
                 ) ?>"
                 alt="Wedding Event Planner"
             >
 
             <span class="public-logo-text">
 
-                <strong>Wedding Planner</strong>
+                <strong>
+                    Wedding Planner
+                </strong>
 
                 <span>
                     Perfect events, beautiful memories
@@ -191,27 +249,67 @@ $currentYear = date('Y');
             id="publicNavLinks"
         >
             <li>
-                <a href="#home">Home</a>
+                <a
+                    class="active"
+                    href="#home"
+                    data-public-nav-link
+                >
+                    Home
+                </a>
             </li>
 
             <li>
-                <a href="#packages">Packages</a>
+                <a
+                    href="#packages"
+                    data-public-nav-link
+                >
+                    Packages
+                </a>
             </li>
 
             <li>
-                <a href="#venues">Venues</a>
+                <a
+                    href="#venues"
+                    data-public-nav-link
+                >
+                    Venues
+                </a>
             </li>
 
             <li>
-                <a href="#services">Services</a>
+                <a
+                    href="#services"
+                    data-public-nav-link
+                >
+                    Services
+                </a>
             </li>
 
             <li>
-                <a href="#gallery">Gallery</a>
+                <a
+                    href="#gallery"
+                    data-public-nav-link
+                >
+                    Gallery
+                </a>
             </li>
 
             <li>
-                <a href="#contact">Contact</a>
+                <a
+                    href="#about"
+                    data-public-nav-link
+                >
+                    About Us
+                </a>
+            </li>
+
+            <li>
+                <a
+                    href="#contact"
+                    data-public-nav-link
+                >
+                    Contact
+                </a>
             </li>
         </ul>
 
@@ -219,15 +317,23 @@ $currentYear = date('Y');
 
             <a
                 class="public-login-button"
-                href="<?= e(url($accountPath)) ?>"
+                href="<?= e(
+                    url($accountPath)
+                ) ?>"
             >
+                <i class="fa-regular fa-user"></i>
+
                 <?= e($accountLabel) ?>
             </a>
 
             <a
                 class="public-book-button"
-                href="<?= e(url($bookingPath)) ?>"
+                href="<?= e(
+                    url($bookingPath)
+                ) ?>"
             >
+                <i class="fa-regular fa-calendar-check"></i>
+
                 Book Event
             </a>
 
@@ -238,41 +344,66 @@ $currentYear = date('Y');
     <header
         class="public-hero"
         id="home"
-        style="--hero-image: url('<?= e($heroImage) ?>');"
+        style="--hero-image: url('<?= e(
+            $heroImage
+        ) ?>');"
     >
 
         <div class="public-hero-content">
 
             <div class="public-hero-badge">
-                <i class="fa-solid fa-heart"></i>
-                Complete Wedding Event Planning
+
+                <span></span>
+
+                We Plan, You Celebrate
+
+                <span></span>
+
             </div>
 
             <h1>
-                Create Your Dream Wedding
+
+                <span class="public-hero-heading-line">
+                    We Make Your
+                </span>
+
+                <span class="public-hero-script">
+                    Dream Wedding
+                </span>
+
+                <span class="public-hero-heading-line">
+                    Come True
+                </span>
+
             </h1>
 
             <p>
-                Plan your perfect wedding with elegant
-                venues, beautiful decorations, premium
-                catering, music and complete professional
-                event management.
+                From elegant venues to stunning décor —
+                we take care of every detail to make your
+                big day unforgettable.
             </p>
 
             <div class="public-hero-actions">
 
                 <a
                     class="public-primary-button"
-                    href="<?= e(url($bookingPath)) ?>"
+                    href="#packages"
+                    data-public-section-link="packages"
                 >
-                    Book Your Event
+                    Explore Packages
+
+                    <i class="fa-solid fa-arrow-right"></i>
                 </a>
 
                 <a
                     class="public-secondary-button"
-                    href="#packages"
+                    href="<?= e(
+                        url($bookingPath)
+                    ) ?>"
                 >
-                    Explore Packages
+                    Book Your Event
+
+                    <i class="fa-regular fa-heart"></i>
                 </a>
 
             </div>
@@ -281,11 +412,16 @@ $currentYear = date('Y');
 
     </header>
 
-    <section class="public-section public-section-white">
+    <section
+        class="public-section public-section-white"
+        id="about"
+    >
 
         <div class="public-section-heading">
 
-            <span>Why choose us</span>
+            <span>
+                Why choose us
+            </span>
 
             <h2>
                 Everything You Need for a Perfect Wedding
@@ -307,12 +443,14 @@ $currentYear = date('Y');
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
                 </div>
 
-                <h3>Elegant Decorations</h3>
+                <h3>
+                    Elegant Decorations
+                </h3>
 
                 <p>
-                    Beautiful and luxurious stage,
-                    entrance and venue setups designed
-                    around your wedding vision.
+                    Beautiful stage, entrance and venue
+                    setups designed around your wedding
+                    vision.
                 </p>
 
             </article>
@@ -323,12 +461,14 @@ $currentYear = date('Y');
                     <i class="fa-solid fa-utensils"></i>
                 </div>
 
-                <h3>Premium Catering</h3>
+                <h3>
+                    Premium Catering
+                </h3>
 
                 <p>
                     Delicious food, professional catering
-                    teams and menu options that can be
-                    customised for your guests.
+                    teams and menu options customised for
+                    your guests.
                 </p>
 
             </article>
@@ -339,12 +479,14 @@ $currentYear = date('Y');
                     <i class="fa-solid fa-music"></i>
                 </div>
 
-                <h3>Music and Atmosphere</h3>
+                <h3>
+                    Music and Atmosphere
+                </h3>
 
                 <p>
-                    Choose soft background music or live
-                    music to create the perfect atmosphere
-                    for your celebration.
+                    Choose background or live music to
+                    create the perfect atmosphere for your
+                    celebration.
                 </p>
 
             </article>
@@ -355,12 +497,14 @@ $currentYear = date('Y');
                     <i class="fa-solid fa-clipboard-check"></i>
                 </div>
 
-                <h3>Complete Management</h3>
+                <h3>
+                    Complete Management
+                </h3>
 
                 <p>
-                    Our team manages the complete process
-                    from booking and preparation through
-                    the final event execution.
+                    Our team manages the entire process
+                    from preparation through final event
+                    execution.
                 </p>
 
             </article>
@@ -376,14 +520,17 @@ $currentYear = date('Y');
 
         <div class="public-section-heading">
 
-            <span>Wedding packages</span>
+            <span>
+                Wedding packages
+            </span>
 
-            <h2>Choose Your Perfect Package</h2>
+            <h2>
+                Choose Your Perfect Package
+            </h2>
 
             <p>
-                Browse our active wedding packages and
-                select the option that best suits your
-                event size, style and budget.
+                Explore our active wedding packages,
+                prices and complete details.
             </p>
 
         </div>
@@ -394,11 +541,13 @@ $currentYear = date('Y');
 
                 <i class="fa-solid fa-gift"></i>
 
-                <h3>No packages available</h3>
+                <h3>
+                    No packages available
+                </h3>
 
                 <p>
-                    Active wedding packages will appear
-                    here when they are added by the Admin.
+                    Active packages will appear here when
+                    added by the Admin.
                 </p>
 
             </div>
@@ -407,154 +556,132 @@ $currentYear = date('Y');
 
             <div class="public-package-grid">
 
-                <?php foreach ($packages as $package): ?>
+                <?php foreach (
+                    $packages as $package
+                ): ?>
                     <?php
-                    $packageId = (int) $package['id'];
-
-                    $packageFeatures =
-                        package_feature_lines(
-                            $package['features']
-                            ?? null
-                        );
+                    $packageId =
+                        (int) $package['id'];
 
                     $packageDescription = trim(
                         (string) (
-                            $package['short_description']
-                            ?? $package['description']
+                            $package[
+                                'short_description'
+                            ]
+                            ?? $package[
+                                'description'
+                            ]
                             ?? ''
                         )
                     );
 
                     $fullDescription = trim(
                         (string) (
-                            $package['description']
+                            $package[
+                                'description'
+                            ]
                             ?? $packageDescription
                         )
                     );
 
-                    $musicOptions = [];
-
-                    if (
-                        (int) (
-                            $package['basic_music']
-                            ?? 0
-                        ) === 1
-                    ) {
-                        $musicOptions[] = 'Basic Music';
-                    }
-
-                    if (
-                        (int) (
-                            $package['live_music']
-                            ?? 0
-                        ) === 1
-                    ) {
-                        $musicOptions[] = 'Live Music';
-                    }
-
-                    $musicText =
-                        $musicOptions !== []
-                            ? implode(
-                                ' and ',
-                                $musicOptions
-                            )
-                            : 'Music not included';
-
-                    $mainPackageImage =
+                    $mainImage =
                         package_image_url(
-                            $package['main_image']
+                            $package[
+                                'main_image'
+                            ]
                             ?? null
                         );
 
-                    $packageGalleryImages = [
+                    $packageImages = [
+                        $mainImage,
+
                         package_image_url(
-                            $package['image_one']
+                            $package[
+                                'image_one'
+                            ]
                             ?? null
                         ),
 
                         package_image_url(
-                            $package['image_two']
+                            $package[
+                                'image_two'
+                            ]
                             ?? null
                         ),
 
                         package_image_url(
-                            $package['image_three']
+                            $package[
+                                'image_three'
+                            ]
                             ?? null
                         ),
                     ];
 
-                    /*
-                     * The genuine main image is included as
-                     * the first thumbnail so it can always
-                     * be restored after another image is shown.
-                     */
-                    $packageCardImages = [
-                        $mainPackageImage,
-                        ...$packageGalleryImages,
-                    ];
+                    $decoration = trim(
+                        (string) (
+                            $package[
+                                'decoration_type'
+                            ]
+                            ?? ''
+                        )
+                    );
                     ?>
 
                     <article class="public-package-card">
 
-                        <div class="public-package-gallery">
+                        <div class="public-card-gallery">
 
                             <img
-                                class="public-package-image"
-                                id="publicPackageMainImage<?= e(
+                                class="public-card-main-image"
+                                id="packageImage<?= e(
                                     (string) $packageId
                                 ) ?>"
-                                src="<?= e($mainPackageImage) ?>"
+                                src="<?= e(
+                                    $mainImage
+                                ) ?>"
                                 alt="<?= e(
-                                    (string) $package['name']
+                                    (string) $package[
+                                        'name'
+                                    ]
                                 ) ?>"
                             >
 
-                            <div class="public-package-thumbnails">
+                            <div class="public-card-thumbnails">
 
                                 <?php foreach (
-                                    $packageCardImages as
-                                    $imageIndex => $galleryImage
+                                    $packageImages as
+                                    $imageIndex =>
+                                    $imageUrl
                                 ): ?>
-                                    <?php
-                                    $isMainImage =
-                                        $imageIndex === 0;
-                                    ?>
 
                                     <button
-                                        class="public-package-thumbnail-button<?= $isMainImage
-                                            ? ' active public-main-thumbnail'
+                                        class="public-thumbnail-button<?= $imageIndex === 0
+                                            ? ' active'
                                             : '' ?>"
                                         type="button"
-
-                                        data-public-package-main="publicPackageMainImage<?= e(
+                                        data-image-target="packageImage<?= e(
                                             (string) $packageId
                                         ) ?>"
-
-                                        data-public-package-image="<?= e(
-                                            $galleryImage
+                                        data-image-url="<?= e(
+                                            $imageUrl
                                         ) ?>"
-
-                                        aria-label="<?= e(
-                                            $isMainImage
-                                                ? 'Restore main package image'
-                                                : 'Show package image '
-                                                    . $imageIndex
+                                        aria-label="Show package image <?= e(
+                                            (string) (
+                                                $imageIndex
+                                                + 1
+                                            )
                                         ) ?>"
                                     >
                                         <img
                                             src="<?= e(
-                                                $galleryImage
+                                                $imageUrl
                                             ) ?>"
-                                            alt="<?= e(
-                                                $isMainImage
-                                                    ? 'Main image for '
-                                                        . (string) $package['name']
-                                                    : 'Additional image for '
-                                                        . (string) $package['name']
-                                            ) ?>"
+                                            alt=""
                                         >
 
-                                        <?php if ($isMainImage): ?>
+                                        <?php if (
+                                            $imageIndex === 0
+                                        ): ?>
 
                                             <span class="public-main-thumbnail-badge">
                                                 Main
@@ -570,176 +697,100 @@ $currentYear = date('Y');
 
                         </div>
 
-                        <div class="public-package-body">
+                        <div class="public-card-body">
 
-                            <div class="public-package-top">
+                            <h3>
+                                <?= e(
+                                    (string) $package[
+                                        'name'
+                                    ]
+                                ) ?>
+                            </h3>
 
-                                <h3>
-                                    <?= e(
-                                        (string) $package['name']
-                                    ) ?>
-                                </h3>
-
-                                <span class="public-active-badge">
-                                    Available
-                                </span>
-
-                            </div>
-
-                            <div class="public-package-price">
+                            <div class="public-card-price">
 
                                 <?= e(
                                     format_package_price(
-                                        (float) $package['price']
+                                        (float) $package[
+                                            'price'
+                                        ]
                                     )
                                 ) ?>
 
                             </div>
 
-                            <p class="public-package-description">
+                            <p class="public-card-description">
 
                                 <?= e(
-                                    $packageDescription !== ''
+                                    $packageDescription
+                                    !== ''
                                         ? $packageDescription
                                         : 'Complete professional wedding package.'
                                 ) ?>
 
                             </p>
 
-                            <ul class="public-package-features">
+                            <button
+                                class="public-detail-button"
+                                type="button"
+                                data-public-detail
 
-                                <li>
-                                    <i class="fa-solid fa-check"></i>
+                                data-name="<?= e(
+                                    (string) $package[
+                                        'name'
+                                    ]
+                                ) ?>"
 
-                                    Up to
+                                data-price="<?= e(
+                                    format_package_price(
+                                        (float) $package[
+                                            'price'
+                                        ]
+                                    )
+                                ) ?>"
 
-                                    <?= e(
-                                        number_format(
-                                            (int) (
-                                                $package[
-                                                    'guest_capacity'
-                                                ]
-                                                ?? 0
-                                            )
+                                data-description="<?= e(
+                                    $fullDescription !== ''
+                                        ? $fullDescription
+                                        : 'Complete professional wedding package.'
+                                ) ?>"
+
+                                data-images="<?= e(
+                                    public_json(
+                                        $packageImages
+                                    )
+                                ) ?>"
+
+                                data-detail-one="<?= e(
+                                    'Guest capacity: '
+                                    . number_format(
+                                        (int) (
+                                            $package[
+                                                'guest_capacity'
+                                            ]
+                                            ?? 0
                                         )
-                                    ) ?>
+                                    )
+                                ) ?>"
 
-                                    guests
-                                </li>
+                                data-detail-two="<?= e(
+                                    'Decoration: '
+                                    . (
+                                        $decoration !== ''
+                                            ? $decoration
+                                            : 'Included'
+                                    )
+                                ) ?>"
 
-                                <li>
-                                    <i class="fa-solid fa-check"></i>
-                                    <?= e($musicText) ?>
-                                </li>
-
-                                <?php foreach (
-                                    array_slice(
-                                        $packageFeatures,
-                                        0,
-                                        2
-                                    ) as $feature
-                                ): ?>
-
-                                    <li>
-                                        <i class="fa-solid fa-check"></i>
-                                        <?= e($feature) ?>
-                                    </li>
-
-                                <?php endforeach; ?>
-
-                            </ul>
-
-                            <div class="public-card-actions">
-
-                                <button
-                                    class="public-detail-button"
-                                    type="button"
-                                    data-public-detail
-                                    data-detail-type="package"
-
-                                    data-name="<?= e(
-                                        (string) $package['name']
-                                    ) ?>"
-
-                                    data-price="<?= e(
-                                        format_package_price(
-                                            (float) $package['price']
-                                        )
-                                    ) ?>"
-
-                                    data-description="<?= e(
-                                        $fullDescription !== ''
-                                            ? $fullDescription
-                                            : 'Complete professional wedding package.'
-                                    ) ?>"
-
-                                    data-image="<?= e(
-                                        $mainPackageImage
-                                    ) ?>"
-
-                                    data-image-one="<?= e(
-                                        $packageGalleryImages[0]
-                                    ) ?>"
-
-                                    data-image-two="<?= e(
-                                        $packageGalleryImages[1]
-                                    ) ?>"
-
-                                    data-image-three="<?= e(
-                                        $packageGalleryImages[2]
-                                    ) ?>"
-
-                                    data-book-url="<?= e(
-                                        url($bookingPath)
-                                    ) ?>"
-
-                                    data-detail-one="<?= e(
-                                        'Guest capacity: '
-                                        . number_format(
-                                            (int) (
-                                                $package[
-                                                    'guest_capacity'
-                                                ]
-                                                ?? 0
-                                            )
-                                        )
-                                    ) ?>"
-
-                                    data-detail-two="<?= e(
-                                        'Decoration: '
-                                        . (
-                                            trim(
-                                                (string) (
-                                                    $package[
-                                                        'decoration_type'
-                                                    ]
-                                                    ?? ''
-                                                )
-                                            ) !== ''
-                                                ? (string) $package[
-                                                    'decoration_type'
-                                                ]
-                                                : 'Included'
-                                        )
-                                    ) ?>"
-
-                                    data-detail-three="<?= e(
-                                        'Music: ' . $musicText
-                                    ) ?>"
-                                >
-                                    View Details
-                                </button>
-
-                                <a
-                                    class="public-card-book-button"
-                                    href="<?= e(
-                                        url($bookingPath)
-                                    ) ?>"
-                                >
-                                    Book Now
-                                </a>
-
-                            </div>
+                                data-detail-three="<?= e(
+                                    'Music: '
+                                    . public_package_music(
+                                        $package
+                                    )
+                                ) ?>"
+                            >
+                                View Details
+                            </button>
 
                         </div>
 
@@ -760,14 +811,17 @@ $currentYear = date('Y');
 
         <div class="public-section-heading">
 
-            <span>Wedding venues</span>
+            <span>
+                Wedding venues
+            </span>
 
-            <h2>Beautiful Venues for Your Event</h2>
+            <h2>
+                Beautiful Venues for Your Event
+            </h2>
 
             <p>
-                Explore Admin-activated wedding venues,
-                compare facilities and guest capacities,
-                and check date availability during booking.
+                Explore beautiful venues, locations,
+                prices and event details.
             </p>
 
         </div>
@@ -778,11 +832,13 @@ $currentYear = date('Y');
 
                 <i class="fa-solid fa-hotel"></i>
 
-                <h3>No venues available</h3>
+                <h3>
+                    No venues available
+                </h3>
 
                 <p>
-                    Venues activated by the Admin will
-                    appear here automatically.
+                    Active venues will appear here when
+                    added by the Admin.
                 </p>
 
             </div>
@@ -791,123 +847,119 @@ $currentYear = date('Y');
 
             <div class="public-venue-grid">
 
-                <?php foreach ($venues as $venue): ?>
+                <?php foreach (
+                    $venues as $venue
+                ): ?>
                     <?php
-                    $venueId = (int) $venue['id'];
-
-                    $venueFacilities =
-                        venue_facility_lines(
-                            $venue['facilities']
-                            ?? null
-                        );
+                    $venueId =
+                        (int) $venue['id'];
 
                     $venueDescription = trim(
                         (string) (
-                            $venue['description']
+                            $venue[
+                                'description'
+                            ]
                             ?? ''
                         )
                     );
 
-                    $mainVenueImage =
+                    $mainImage =
                         venue_image_url(
-                            $venue['main_image']
+                            $venue[
+                                'main_image'
+                            ]
                             ?? null
                         );
 
-                    $venueGalleryImages = [
+                    $venueImages = [
+                        $mainImage,
+
                         venue_image_url(
-                            $venue['image_one']
+                            $venue[
+                                'image_one'
+                            ]
                             ?? null
                         ),
 
                         venue_image_url(
-                            $venue['image_two']
+                            $venue[
+                                'image_two'
+                            ]
                             ?? null
                         ),
 
                         venue_image_url(
-                            $venue['image_three']
+                            $venue[
+                                'image_three'
+                            ]
                             ?? null
                         ),
                     ];
 
-                    /*
-                     * The venue main image is also shown
-                     * as the first thumbnail.
-                     */
-                    $venueCardImages = [
-                        $mainVenueImage,
-                        ...$venueGalleryImages,
-                    ];
-
-                    $venueBookingPath =
-                        $currentRole === 'customer'
-                            ? '/customer/booking.php?venue_id='
-                                . $venueId
-                            : '/auth/customer_login.php';
+                    $facilities =
+                        venue_facility_lines(
+                            $venue[
+                                'facilities'
+                            ]
+                            ?? null
+                        );
                     ?>
 
                     <article class="public-venue-card">
 
-                        <div class="public-venue-gallery">
+                        <div class="public-card-gallery">
 
                             <img
-                                class="public-venue-image"
-                                id="publicVenueMainImage<?= e(
+                                class="public-card-main-image"
+                                id="venueImage<?= e(
                                     (string) $venueId
                                 ) ?>"
-                                src="<?= e($mainVenueImage) ?>"
+                                src="<?= e(
+                                    $mainImage
+                                ) ?>"
                                 alt="<?= e(
-                                    (string) $venue['name']
+                                    (string) $venue[
+                                        'name'
+                                    ]
                                 ) ?>"
                             >
 
-                            <div class="public-venue-thumbnails">
+                            <div class="public-card-thumbnails">
 
                                 <?php foreach (
-                                    $venueCardImages as
-                                    $imageIndex => $galleryImage
+                                    $venueImages as
+                                    $imageIndex =>
+                                    $imageUrl
                                 ): ?>
-                                    <?php
-                                    $isMainImage =
-                                        $imageIndex === 0;
-                                    ?>
 
                                     <button
-                                        class="public-venue-thumbnail-button<?= $isMainImage
-                                            ? ' active public-main-thumbnail'
+                                        class="public-thumbnail-button<?= $imageIndex === 0
+                                            ? ' active'
                                             : '' ?>"
                                         type="button"
-
-                                        data-public-venue-main="publicVenueMainImage<?= e(
+                                        data-image-target="venueImage<?= e(
                                             (string) $venueId
                                         ) ?>"
-
-                                        data-public-venue-image="<?= e(
-                                            $galleryImage
+                                        data-image-url="<?= e(
+                                            $imageUrl
                                         ) ?>"
-
-                                        aria-label="<?= e(
-                                            $isMainImage
-                                                ? 'Restore main venue image'
-                                                : 'Show venue image '
-                                                    . $imageIndex
+                                        aria-label="Show venue image <?= e(
+                                            (string) (
+                                                $imageIndex
+                                                + 1
+                                            )
                                         ) ?>"
                                     >
                                         <img
                                             src="<?= e(
-                                                $galleryImage
+                                                $imageUrl
                                             ) ?>"
-                                            alt="<?= e(
-                                                $isMainImage
-                                                    ? 'Main image for '
-                                                        . (string) $venue['name']
-                                                    : 'Additional image for '
-                                                        . (string) $venue['name']
-                                            ) ?>"
+                                            alt=""
                                         >
 
-                                        <?php if ($isMainImage): ?>
+                                        <?php if (
+                                            $imageIndex === 0
+                                        ): ?>
 
                                             <span class="public-main-thumbnail-badge">
                                                 Main
@@ -923,43 +975,41 @@ $currentYear = date('Y');
 
                         </div>
 
-                        <div class="public-venue-body">
+                        <div class="public-card-body">
 
-                            <div class="public-venue-title">
+                            <h3>
+                                <?= e(
+                                    (string) $venue[
+                                        'name'
+                                    ]
+                                ) ?>
+                            </h3>
 
-                                <h3>
-                                    <?= e(
-                                        (string) $venue['name']
-                                    ) ?>
-                                </h3>
-
-                                <span class="public-venue-status">
-                                    Date Based
-                                </span>
-
-                            </div>
-
-                            <div class="public-venue-location">
+                            <div class="public-card-location">
 
                                 <i class="fa-solid fa-location-dot"></i>
 
                                 <?= e(
-                                    (string) $venue['location']
+                                    (string) $venue[
+                                        'location'
+                                    ]
                                 ) ?>
 
                             </div>
 
-                            <div class="public-venue-price">
+                            <div class="public-card-price">
 
                                 <?= e(
                                     format_venue_price(
-                                        (float) $venue['price']
+                                        (float) $venue[
+                                            'price'
+                                        ]
                                     )
                                 ) ?>
 
                             </div>
 
-                            <p class="public-venue-description">
+                            <p class="public-card-description">
 
                                 <?= e(
                                     $venueDescription !== ''
@@ -969,126 +1019,70 @@ $currentYear = date('Y');
 
                             </p>
 
-                            <ul class="public-venue-features">
+                            <button
+                                class="public-detail-button"
+                                type="button"
+                                data-public-detail
 
-                                <li>
-                                    <i class="fa-solid fa-users"></i>
+                                data-name="<?= e(
+                                    (string) $venue[
+                                        'name'
+                                    ]
+                                ) ?>"
 
-                                    Up to
+                                data-price="<?= e(
+                                    format_venue_price(
+                                        (float) $venue[
+                                            'price'
+                                        ]
+                                    )
+                                ) ?>"
 
-                                    <?= e(
-                                        number_format(
-                                            (int) (
-                                                $venue['capacity']
-                                                ?? 0
+                                data-description="<?= e(
+                                    $venueDescription !== ''
+                                        ? $venueDescription
+                                        : 'Professional wedding-event venue.'
+                                ) ?>"
+
+                                data-images="<?= e(
+                                    public_json(
+                                        $venueImages
+                                    )
+                                ) ?>"
+
+                                data-detail-one="<?= e(
+                                    'Location: '
+                                    . (string) $venue[
+                                        'location'
+                                    ]
+                                ) ?>"
+
+                                data-detail-two="<?= e(
+                                    'Guest capacity: '
+                                    . number_format(
+                                        (int) (
+                                            $venue[
+                                                'capacity'
+                                            ]
+                                            ?? 0
+                                        )
+                                    )
+                                ) ?>"
+
+                                data-detail-three="<?= e(
+                                    'Facilities: '
+                                    . (
+                                        $facilities !== []
+                                            ? implode(
+                                                ', ',
+                                                $facilities
                                             )
-                                        )
-                                    ) ?>
-
-                                    guests
-                                </li>
-
-                                <?php foreach (
-                                    array_slice(
-                                        $venueFacilities,
-                                        0,
-                                        2
-                                    ) as $facility
-                                ): ?>
-
-                                    <li>
-                                        <i class="fa-solid fa-check"></i>
-                                        <?= e($facility) ?>
-                                    </li>
-
-                                <?php endforeach; ?>
-
-                            </ul>
-
-                            <div class="public-card-actions">
-
-                                <button
-                                    class="public-detail-button"
-                                    type="button"
-                                    data-public-detail
-                                    data-detail-type="venue"
-
-                                    data-name="<?= e(
-                                        (string) $venue['name']
-                                    ) ?>"
-
-                                    data-price="<?= e(
-                                        format_venue_price(
-                                            (float) $venue['price']
-                                        )
-                                    ) ?>"
-
-                                    data-description="<?= e(
-                                        $venueDescription !== ''
-                                            ? $venueDescription
-                                            : 'Professional wedding-event venue.'
-                                    ) ?>"
-
-                                    data-image="<?= e(
-                                        $mainVenueImage
-                                    ) ?>"
-
-                                    data-image-one="<?= e(
-                                        $venueGalleryImages[0]
-                                    ) ?>"
-
-                                    data-image-two="<?= e(
-                                        $venueGalleryImages[1]
-                                    ) ?>"
-
-                                    data-image-three="<?= e(
-                                        $venueGalleryImages[2]
-                                    ) ?>"
-
-                                    data-book-url="<?= e(
-                                        url($venueBookingPath)
-                                    ) ?>"
-
-                                    data-detail-one="<?= e(
-                                        'Location: '
-                                        . (string) $venue['location']
-                                    ) ?>"
-
-                                    data-detail-two="<?= e(
-                                        'Guest capacity: '
-                                        . number_format(
-                                            (int) (
-                                                $venue['capacity']
-                                                ?? 0
-                                            )
-                                        )
-                                    ) ?>"
-
-                                    data-detail-three="<?= e(
-                                        'Facilities: '
-                                        . (
-                                            $venueFacilities !== []
-                                                ? implode(
-                                                    ', ',
-                                                    $venueFacilities
-                                                )
-                                                : 'Not specified'
-                                        )
-                                    ) ?>"
-                                >
-                                    View Details
-                                </button>
-
-                                <a
-                                    class="public-card-book-button"
-                                    href="<?= e(
-                                        url($venueBookingPath)
-                                    ) ?>"
-                                >
-                                    Book Venue
-                                </a>
-
-                            </div>
+                                            : 'Not specified'
+                                    )
+                                ) ?>"
+                            >
+                                View Details
+                            </button>
 
                         </div>
 
@@ -1109,14 +1103,17 @@ $currentYear = date('Y');
 
         <div class="public-section-heading">
 
-            <span>Additional services</span>
+            <span>
+                Additional services
+            </span>
 
-            <h2>Complete Your Wedding Experience</h2>
+            <h2>
+                Complete Your Wedding Experience
+            </h2>
 
             <p>
-                Add professional services to your booking
-                according to the needs of your wedding
-                event.
+                Add professional services according to
+                the needs of your event.
             </p>
 
         </div>
@@ -1127,11 +1124,13 @@ $currentYear = date('Y');
 
                 <i class="fa-solid fa-bell-concierge"></i>
 
-                <h3>No services available</h3>
+                <h3>
+                    No services available
+                </h3>
 
                 <p>
                     Active services will appear here when
-                    they are created by the Admin.
+                    added by the Admin.
                 </p>
 
             </div>
@@ -1140,7 +1139,9 @@ $currentYear = date('Y');
 
             <div class="public-services-grid">
 
-                <?php foreach ($services as $service): ?>
+                <?php foreach (
+                    $services as $service
+                ): ?>
 
                     <article class="public-service-card">
 
@@ -1150,7 +1151,9 @@ $currentYear = date('Y');
 
                         <h3>
                             <?= e(
-                                (string) $service['name']
+                                (string) $service[
+                                    'name'
+                                ]
                             ) ?>
                         </h3>
 
@@ -1160,7 +1163,9 @@ $currentYear = date('Y');
 
                             <?= e(
                                 number_format(
-                                    (float) $service['price'],
+                                    (float) $service[
+                                        'price'
+                                    ],
                                     0
                                 )
                             ) ?>
@@ -1170,7 +1175,9 @@ $currentYear = date('Y');
                         <p>
                             <?= e(
                                 (string) (
-                                    $service['description']
+                                    $service[
+                                        'description'
+                                    ]
                                     ?: 'Professional wedding-event service.'
                                 )
                             ) ?>
@@ -1193,29 +1200,35 @@ $currentYear = date('Y');
 
         <div class="public-section-heading">
 
-            <span>Wedding gallery</span>
+            <span>
+                Wedding gallery
+            </span>
 
             <h2>
                 Memorable Events and Beautiful Setups
             </h2>
 
             <p>
-                View active gallery images uploaded by our
-                professional Event Manager.
+                View active wedding images uploaded by
+                our Event Manager.
             </p>
 
         </div>
 
-        <?php if ($galleryImages === []): ?>
+        <?php if (
+            $galleryImages === []
+        ): ?>
 
             <div class="public-empty">
 
                 <i class="fa-regular fa-images"></i>
 
-                <h3>No gallery images available</h3>
+                <h3>
+                    No gallery images available
+                </h3>
 
                 <p>
-                    Active wedding-event images will appear
+                    Active wedding images will appear
                     here automatically.
                 </p>
 
@@ -1226,76 +1239,89 @@ $currentYear = date('Y');
             <div class="public-gallery-grid">
 
                 <?php foreach (
-                    $galleryImages as $galleryImage
+                    $galleryImages as
+                    $galleryImage
                 ): ?>
                     <?php
                     $galleryTitle = trim(
                         (string) (
-                            $galleryImage['title']
+                            $galleryImage[
+                                'title'
+                            ]
                             ?? ''
                         )
                     );
 
-                    if ($galleryTitle === '') {
-                        $galleryTitle = 'Wedding Event';
-                    }
+                    $galleryTitle =
+                        $galleryTitle !== ''
+                            ? $galleryTitle
+                            : 'Wedding Event';
 
-                    $galleryEventType = trim(
+                    $eventType = trim(
                         (string) (
-                            $galleryImage['event_type']
+                            $galleryImage[
+                                'event_type'
+                            ]
                             ?? ''
                         )
                     );
 
-                    if ($galleryEventType === '') {
-                        $galleryEventType = 'Wedding Event';
-                    }
+                    $eventType =
+                        $eventType !== ''
+                            ? $eventType
+                            : 'Wedding Event';
 
-                    $galleryDescription = trim(
+                    $description = trim(
                         (string) (
-                            $galleryImage['description']
+                            $galleryImage[
+                                'description'
+                            ]
                             ?? ''
                         )
                     );
 
-                    if ($galleryDescription === '') {
-                        $galleryDescription =
-                            'No description provided.';
-                    }
+                    $description =
+                        $description !== ''
+                            ? $description
+                            : 'No description provided.';
 
-                    $firstGalleryImage =
+                    $galleryItems = [
                         gallery_image_url(
-                            $galleryImage['image']
+                            $galleryImage[
+                                'image'
+                            ]
                             ?? null
-                        );
+                        ),
+                    ];
 
-                    $secondGalleryImagePath = trim(
+                    $secondImage = trim(
                         (string) (
-                            $galleryImage['image_two']
+                            $galleryImage[
+                                'image_two'
+                            ]
                             ?? ''
                         )
                     );
 
-                    $secondGalleryImage =
-                        $secondGalleryImagePath !== ''
-                            ? gallery_image_url(
-                                $secondGalleryImagePath
-                            )
-                            : '';
+                    if (
+                        $secondImage !== ''
+                    ) {
+                        $galleryItems[] =
+                            gallery_image_url(
+                                $secondImage
+                            );
+                    }
                     ?>
 
                     <button
                         class="public-gallery-item"
                         type="button"
+                        data-public-gallery
 
-                        data-public-gallery-item
-
-                        data-image-one="<?= e(
-                            $firstGalleryImage
-                        ) ?>"
-
-                        data-image-two="<?= e(
-                            $secondGalleryImage
+                        data-images="<?= e(
+                            public_json(
+                                $galleryItems
+                            )
                         ) ?>"
 
                         data-title="<?= e(
@@ -1303,11 +1329,11 @@ $currentYear = date('Y');
                         ) ?>"
 
                         data-event-type="<?= e(
-                            $galleryEventType
+                            $eventType
                         ) ?>"
 
                         data-description="<?= e(
-                            $galleryDescription
+                            $description
                         ) ?>"
 
                         aria-label="Open <?= e(
@@ -1317,7 +1343,7 @@ $currentYear = date('Y');
 
                         <img
                             src="<?= e(
-                                $firstGalleryImage
+                                $galleryItems[0]
                             ) ?>"
                             alt="<?= e(
                                 $galleryTitle
@@ -1325,14 +1351,22 @@ $currentYear = date('Y');
                         >
 
                         <?php if (
-                            $secondGalleryImage !== ''
+                            count(
+                                $galleryItems
+                            ) > 1
                         ): ?>
 
                             <span class="public-gallery-photo-count">
 
                                 <i class="fa-solid fa-images"></i>
 
-                                <span>2 Photos</span>
+                                <?= e(
+                                    (string) count(
+                                        $galleryItems
+                                    )
+                                ) ?>
+
+                                Photos
 
                             </span>
 
@@ -1350,7 +1384,7 @@ $currentYear = date('Y');
 
                                 <small>
                                     <?= e(
-                                        $galleryEventType
+                                        $eventType
                                     ) ?>
                                 </small>
 
@@ -1405,9 +1439,9 @@ $currentYear = date('Y');
                 </h2>
 
                 <p>
-                    Create your customer account or log in
-                    to select a wedding package, venue,
-                    additional services and event date.
+                    Create an account or log in to choose
+                    a package, venue, additional services
+                    and event date.
                 </p>
 
             </div>
@@ -1416,17 +1450,23 @@ $currentYear = date('Y');
 
                 <a
                     class="public-contact-primary"
-                    href="<?= e(url($bookingPath)) ?>"
+                    href="<?= e(
+                        url($bookingPath)
+                    ) ?>"
                 >
                     Book an Event
                 </a>
 
-                <?php if (!$isLoggedIn): ?>
+                <?php if (
+                    !$isLoggedIn
+                ): ?>
 
                     <a
                         class="public-contact-secondary"
                         href="<?= e(
-                            url('/auth/register.php')
+                            url(
+                                '/auth/register.php'
+                            )
                         ) ?>"
                     >
                         Create Account
@@ -1457,7 +1497,9 @@ $currentYear = date('Y');
 
             <div class="public-footer-logo">
 
-                <h3>Wedding Event Planner</h3>
+                <h3>
+                    Wedding Event Planner
+                </h3>
 
                 <p>
                     Making every wedding beautiful,
@@ -1468,15 +1510,37 @@ $currentYear = date('Y');
 
             <div class="public-footer-links">
 
-                <a href="#packages">Packages</a>
+                <a
+                    href="#packages"
+                    data-public-section-link="packages"
+                >
+                    Packages
+                </a>
 
-                <a href="#venues">Venues</a>
+                <a
+                    href="#venues"
+                    data-public-section-link="venues"
+                >
+                    Venues
+                </a>
 
-                <a href="#services">Services</a>
+                <a
+                    href="#services"
+                    data-public-section-link="services"
+                >
+                    Services
+                </a>
 
-                <a href="#gallery">Gallery</a>
+                <a
+                    href="#gallery"
+                    data-public-section-link="gallery"
+                >
+                    Gallery
+                </a>
 
-                <a href="<?= e(url($accountPath)) ?>">
+                <a href="<?= e(
+                    url($accountPath)
+                ) ?>">
                     <?= e($accountLabel) ?>
                 </a>
 
@@ -1486,8 +1550,10 @@ $currentYear = date('Y');
 
         <div class="public-footer-copyright">
 
-            © <?= e((string) $currentYear) ?>
-            Wedding Event Planner. All rights reserved.
+            © <?= e($currentYear) ?>
+
+            Wedding Event Planner.
+            All rights reserved.
 
         </div>
 
@@ -1496,9 +1562,14 @@ $currentYear = date('Y');
     <div
         class="public-modal"
         id="publicDetailsModal"
+        aria-hidden="true"
     >
 
-        <div class="public-modal-content">
+        <div
+            class="public-modal-content"
+            role="dialog"
+            aria-modal="true"
+        >
 
             <button
                 class="public-modal-close"
@@ -1541,25 +1612,20 @@ $currentYear = date('Y');
                         id="publicDetailsDescription"
                     ></p>
 
-                    <div class="public-modal-detail">
-                        <strong id="publicDetailOne"></strong>
-                    </div>
+                    <div
+                        class="public-modal-detail"
+                        id="publicDetailOne"
+                    ></div>
 
-                    <div class="public-modal-detail">
-                        <strong id="publicDetailTwo"></strong>
-                    </div>
+                    <div
+                        class="public-modal-detail"
+                        id="publicDetailTwo"
+                    ></div>
 
-                    <div class="public-modal-detail">
-                        <strong id="publicDetailThree"></strong>
-                    </div>
-
-                    <a
-                        class="public-modal-book"
-                        id="publicDetailsBook"
-                        href="<?= e(url($bookingPath)) ?>"
-                    >
-                        Book This Event
-                    </a>
+                    <div
+                        class="public-modal-detail"
+                        id="publicDetailThree"
+                    ></div>
 
                 </div>
 
@@ -1579,7 +1645,6 @@ $currentYear = date('Y');
             class="public-image-modal-content"
             role="dialog"
             aria-modal="true"
-            aria-label="Wedding gallery preview"
         >
 
             <button
@@ -1649,184 +1714,29 @@ $currentYear = date('Y');
     <script>
         "use strict";
 
+        const body =
+            document.body;
+
         const mobileButton =
             document.getElementById(
                 "publicMobileButton"
             );
 
-        const navigationLinks =
+        const navigation =
             document.getElementById(
                 "publicNavLinks"
             );
 
-        mobileButton?.addEventListener(
-            "click",
-            function () {
-                navigationLinks?.classList.toggle(
-                    "open"
-                );
-            }
-        );
-
-        navigationLinks
-            ?.querySelectorAll("a")
-            .forEach(function (link) {
-                link.addEventListener(
-                    "click",
-                    function () {
-                        navigationLinks.classList.remove(
-                            "open"
-                        );
-                    }
-                );
-            });
-
-        /*
-         * Package card thumbnails
-         */
-
-        document
-            .querySelectorAll(
-                "[data-public-package-main]"
-            )
-            .forEach(function (thumbnailButton) {
-                thumbnailButton.addEventListener(
-                    "click",
-                    function () {
-                        const mainImage =
-                            document.getElementById(
-                                thumbnailButton.dataset
-                                    .publicPackageMain
-                            );
-
-                        const selectedImage =
-                            thumbnailButton.dataset
-                                .publicPackageImage;
-
-                        if (
-                            !mainImage
-                            || !selectedImage
-                        ) {
-                            return;
-                        }
-
-                        mainImage.style.opacity =
-                            "0.35";
-
-                        window.setTimeout(
-                            function () {
-                                mainImage.src =
-                                    selectedImage;
-
-                                mainImage.style.opacity =
-                                    "1";
-                            },
-                            120
-                        );
-
-                        const thumbnailRow =
-                            thumbnailButton.closest(
-                                ".public-package-thumbnails"
-                            );
-
-                        thumbnailRow
-                            ?.querySelectorAll(
-                                ".public-package-thumbnail-button"
-                            )
-                            .forEach(
-                                function (button) {
-                                    button.classList.remove(
-                                        "active"
-                                    );
-                                }
-                            );
-
-                        thumbnailButton.classList.add(
-                            "active"
-                        );
-                    }
-                );
-            });
-
-        /*
-         * Venue card thumbnails
-         */
-
-        document
-            .querySelectorAll(
-                "[data-public-venue-main]"
-            )
-            .forEach(function (thumbnailButton) {
-                thumbnailButton.addEventListener(
-                    "click",
-                    function () {
-                        const mainImage =
-                            document.getElementById(
-                                thumbnailButton.dataset
-                                    .publicVenueMain
-                            );
-
-                        const selectedImage =
-                            thumbnailButton.dataset
-                                .publicVenueImage;
-
-                        if (
-                            !mainImage
-                            || !selectedImage
-                        ) {
-                            return;
-                        }
-
-                        mainImage.style.opacity =
-                            "0.35";
-
-                        window.setTimeout(
-                            function () {
-                                mainImage.src =
-                                    selectedImage;
-
-                                mainImage.style.opacity =
-                                    "1";
-                            },
-                            120
-                        );
-
-                        const thumbnailRow =
-                            thumbnailButton.closest(
-                                ".public-venue-thumbnails"
-                            );
-
-                        thumbnailRow
-                            ?.querySelectorAll(
-                                ".public-venue-thumbnail-button"
-                            )
-                            .forEach(
-                                function (button) {
-                                    button.classList.remove(
-                                        "active"
-                                    );
-                                }
-                            );
-
-                        thumbnailButton.classList.add(
-                            "active"
-                        );
-                    }
-                );
-            });
-
-        /*
-         * Package and venue details modal
-         */
+        const navigationLinks =
+            Array.from(
+                document.querySelectorAll(
+                    "[data-public-nav-link]"
+                )
+            );
 
         const detailsModal =
             document.getElementById(
                 "publicDetailsModal"
-            );
-
-        const detailsClose =
-            document.getElementById(
-                "publicDetailsClose"
             );
 
         const detailsImage =
@@ -1839,278 +1749,19 @@ $currentYear = date('Y');
                 "publicDetailsThumbnails"
             );
 
-        const detailsBook =
-            document.getElementById(
-                "publicDetailsBook"
-            );
-
-        document
-            .querySelectorAll(
-                "[data-public-detail]"
-            )
-            .forEach(function (button) {
-                button.addEventListener(
-                    "click",
-                    function () {
-                        document.getElementById(
-                            "publicDetailsName"
-                        ).textContent =
-                            button.dataset.name;
-
-                        document.getElementById(
-                            "publicDetailsPrice"
-                        ).textContent =
-                            button.dataset.price;
-
-                        document.getElementById(
-                            "publicDetailsDescription"
-                        ).textContent =
-                            button.dataset.description;
-
-                        detailsImage.src =
-                            button.dataset.image;
-
-                        document.getElementById(
-                            "publicDetailOne"
-                        ).textContent =
-                            button.dataset.detailOne;
-
-                        document.getElementById(
-                            "publicDetailTwo"
-                        ).textContent =
-                            button.dataset.detailTwo;
-
-                        document.getElementById(
-                            "publicDetailThree"
-                        ).textContent =
-                            button.dataset.detailThree;
-
-                        detailsThumbnails.innerHTML = "";
-
-                        /*
-                         * The genuine main image is now the
-                         * first modal thumbnail.
-                         */
-                        const detailImages = [
-                            {
-                                imageUrl:
-                                    button.dataset.image,
-                                isMain: true
-                            },
-
-                            {
-                                imageUrl:
-                                    button.dataset.imageOne,
-                                isMain: false
-                            },
-
-                            {
-                                imageUrl:
-                                    button.dataset.imageTwo,
-                                isMain: false
-                            },
-
-                            {
-                                imageUrl:
-                                    button.dataset.imageThree,
-                                isMain: false
-                            }
-                        ].filter(
-                            function (imageData) {
-                                return Boolean(
-                                    imageData.imageUrl
-                                );
-                            }
-                        );
-
-                        if (detailImages.length === 0) {
-                            detailsThumbnails.classList.add(
-                                "hidden"
-                            );
-                        } else {
-                            detailsThumbnails.classList.remove(
-                                "hidden"
-                            );
-
-                            detailImages.forEach(
-                                function (
-                                    imageData,
-                                    imageIndex
-                                ) {
-                                    const thumbnailButton =
-                                        document.createElement(
-                                            "button"
-                                        );
-
-                                    const thumbnailImage =
-                                        document.createElement(
-                                            "img"
-                                        );
-
-                                    thumbnailButton.type =
-                                        "button";
-
-                                    thumbnailButton.className =
-                                        "public-modal-thumbnail-button";
-
-                                    if (imageIndex === 0) {
-                                        thumbnailButton
-                                            .classList
-                                            .add("active");
-                                    }
-
-                                    thumbnailButton.setAttribute(
-                                        "aria-label",
-                                        imageData.isMain
-                                            ? "Restore main image"
-                                            : "Show image "
-                                                + imageIndex
-                                    );
-
-                                    thumbnailImage.src =
-                                        imageData.imageUrl;
-
-                                    thumbnailImage.alt =
-                                        imageData.isMain
-                                            ? "Main wedding image"
-                                            : "Additional wedding image";
-
-                                    thumbnailButton.appendChild(
-                                        thumbnailImage
-                                    );
-
-                                    if (imageData.isMain) {
-                                        const mainBadge =
-                                            document.createElement(
-                                                "span"
-                                            );
-
-                                        mainBadge.className =
-                                            "public-main-thumbnail-badge";
-
-                                        mainBadge.textContent =
-                                            "Main";
-
-                                        thumbnailButton.appendChild(
-                                            mainBadge
-                                        );
-                                    }
-
-                                    thumbnailButton.addEventListener(
-                                        "click",
-                                        function () {
-                                            detailsImage.style.opacity =
-                                                "0.35";
-
-                                            window.setTimeout(
-                                                function () {
-                                                    detailsImage.src =
-                                                        imageData.imageUrl;
-
-                                                    detailsImage.style.opacity =
-                                                        "1";
-                                                },
-                                                120
-                                            );
-
-                                            detailsThumbnails
-                                                .querySelectorAll(
-                                                    ".public-modal-thumbnail-button"
-                                                )
-                                                .forEach(
-                                                    function (item) {
-                                                        item.classList.remove(
-                                                            "active"
-                                                        );
-                                                    }
-                                                );
-
-                                            thumbnailButton.classList.add(
-                                                "active"
-                                            );
-                                        }
-                                    );
-
-                                    detailsThumbnails.appendChild(
-                                        thumbnailButton
-                                    );
-                                }
-                            );
-                        }
-
-                        detailsBook.textContent =
-                            button.dataset.detailType
-                                === "package"
-                                ? "Book This Package"
-                                : "Book This Venue";
-
-                        detailsBook.href =
-                            button.dataset.bookUrl
-                            || <?= json_encode(
-                                url($bookingPath),
-                                JSON_HEX_TAG
-                                | JSON_HEX_AMP
-                                | JSON_HEX_APOS
-                                | JSON_HEX_QUOT
-                            ) ?>;
-
-                        detailsModal.classList.add(
-                            "open"
-                        );
-
-                        document.body.style.overflow =
-                            "hidden";
-                    }
-                );
-            });
-
-        function closeDetailsModal() {
-            detailsModal.classList.remove(
-                "open"
-            );
-
-            detailsThumbnails.innerHTML = "";
-
-            detailsThumbnails.classList.add(
-                "hidden"
-            );
-
-            detailsImage.src = "";
-
-            document.body.style.overflow = "";
-        }
-
-        detailsClose?.addEventListener(
-            "click",
-            closeDetailsModal
-        );
-
-        detailsModal?.addEventListener(
-            "click",
-            function (event) {
-                if (event.target === detailsModal) {
-                    closeDetailsModal();
-                }
-            }
-        );
-
-        /*
-         * Public wedding gallery modal
-         */
-
         const imageModal =
             document.getElementById(
                 "publicImageModal"
             );
 
-        const imageClose =
-            document.getElementById(
-                "publicImageClose"
-            );
-
         const imagePreview =
             document.getElementById(
                 "publicImagePreview"
+            );
+
+        const imageCounter =
+            document.getElementById(
+                "publicImageCounter"
             );
 
         const imagePrevious =
@@ -2123,202 +1774,623 @@ $currentYear = date('Y');
                 "publicImageNext"
             );
 
-        const imageCounter =
-            document.getElementById(
-                "publicImageCounter"
+        let galleryImages = [];
+        let galleryIndex = 0;
+
+        function parseImages(value) {
+            try {
+                const images =
+                    JSON.parse(
+                        value || "[]"
+                    );
+
+                return Array.isArray(
+                    images
+                )
+                    ? images.filter(Boolean)
+                    : [];
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function setPageLocked(locked) {
+            body.style.overflow =
+                locked
+                    ? "hidden"
+                    : "";
+        }
+
+        function setActiveNavigation(
+            sectionId
+        ) {
+            navigationLinks.forEach(
+                function (link) {
+                    const linkTarget =
+                        link
+                            .getAttribute(
+                                "href"
+                            )
+                            ?.replace(
+                                "#",
+                                ""
+                            );
+
+                    link.classList.toggle(
+                        "active",
+                        linkTarget === sectionId
+                    );
+                }
+            );
+        }
+
+        function setNavigationFromHash() {
+            const sectionId =
+                window.location.hash
+                    .replace(
+                        "#",
+                        ""
+                    );
+
+            const validSection =
+                navigationLinks.some(
+                    function (link) {
+                        return (
+                            link.getAttribute(
+                                "href"
+                            )
+                            === `#${sectionId}`
+                        );
+                    }
+                );
+
+            setActiveNavigation(
+                validSection
+                    ? sectionId
+                    : "home"
+            );
+        }
+
+        mobileButton?.addEventListener(
+            "click",
+            function () {
+                navigation?.classList.toggle(
+                    "open"
+                );
+            }
+        );
+
+        navigationLinks.forEach(
+            function (link) {
+                link.addEventListener(
+                    "click",
+                    function () {
+                        const sectionId =
+                            link
+                                .getAttribute(
+                                    "href"
+                                )
+                                ?.replace(
+                                    "#",
+                                    ""
+                                );
+
+                        if (sectionId) {
+                            setActiveNavigation(
+                                sectionId
+                            );
+                        }
+
+                        navigation?.classList.remove(
+                            "open"
+                        );
+                    }
+                );
+            }
+        );
+
+        document
+            .querySelectorAll(
+                "[data-public-section-link]"
+            )
+            .forEach(
+                function (link) {
+                    link.addEventListener(
+                        "click",
+                        function () {
+                            const sectionId =
+                                link.dataset
+                                    .publicSectionLink;
+
+                            if (sectionId) {
+                                setActiveNavigation(
+                                    sectionId
+                                );
+                            }
+                        }
+                    );
+                }
             );
 
-        const imageTitle =
-            document.getElementById(
-                "publicImageTitle"
+        window.addEventListener(
+            "hashchange",
+            setNavigationFromHash
+        );
+
+        window.addEventListener(
+            "load",
+            setNavigationFromHash
+        );
+
+        setNavigationFromHash();
+
+        document
+            .querySelectorAll(
+                "[data-image-target]"
+            )
+            .forEach(
+                function (button) {
+                    button.addEventListener(
+                        "click",
+                        function () {
+                            const target =
+                                document.getElementById(
+                                    button.dataset
+                                        .imageTarget
+                                    || ""
+                                );
+
+                            const imageUrl =
+                                button.dataset
+                                    .imageUrl
+                                || "";
+
+                            if (
+                                !target
+                                || !imageUrl
+                            ) {
+                                return;
+                            }
+
+                            target.style.opacity =
+                                "0.35";
+
+                            window.setTimeout(
+                                function () {
+                                    target.src =
+                                        imageUrl;
+
+                                    target.style.opacity =
+                                        "1";
+                                },
+                                120
+                            );
+
+                            button
+                                .parentElement
+                                ?.querySelectorAll(
+                                    ".public-thumbnail-button"
+                                )
+                                .forEach(
+                                    function (item) {
+                                        item
+                                            .classList
+                                            .remove(
+                                                "active"
+                                            );
+                                    }
+                                );
+
+                            button.classList.add(
+                                "active"
+                            );
+                        }
+                    );
+                }
             );
 
-        const imageEventType =
-            document.getElementById(
-                "publicImageEventType"
+        function closeDetailsModal() {
+            detailsModal?.classList.remove(
+                "open"
             );
 
-        const imageDescription =
-            document.getElementById(
-                "publicImageDescription"
+            detailsModal?.setAttribute(
+                "aria-hidden",
+                "true"
             );
 
-        let publicGalleryImages = [];
-        let publicGalleryIndex = 0;
+            detailsThumbnails.innerHTML =
+                "";
 
-        function renderPublicGalleryImage() {
+            detailsImage.src = "";
+
+            setPageLocked(false);
+        }
+
+        document
+            .querySelectorAll(
+                "[data-public-detail]"
+            )
+            .forEach(
+                function (button) {
+                    button.addEventListener(
+                        "click",
+                        function () {
+                            const images =
+                                parseImages(
+                                    button.dataset
+                                        .images
+                                );
+
+                            document
+                                .getElementById(
+                                    "publicDetailsName"
+                                )
+                                .textContent =
+                                    button.dataset
+                                        .name
+                                    || "";
+
+                            document
+                                .getElementById(
+                                    "publicDetailsPrice"
+                                )
+                                .textContent =
+                                    button.dataset
+                                        .price
+                                    || "";
+
+                            document
+                                .getElementById(
+                                    "publicDetailsDescription"
+                                )
+                                .textContent =
+                                    button.dataset
+                                        .description
+                                    || "";
+
+                            document
+                                .getElementById(
+                                    "publicDetailOne"
+                                )
+                                .textContent =
+                                    button.dataset
+                                        .detailOne
+                                    || "";
+
+                            document
+                                .getElementById(
+                                    "publicDetailTwo"
+                                )
+                                .textContent =
+                                    button.dataset
+                                        .detailTwo
+                                    || "";
+
+                            document
+                                .getElementById(
+                                    "publicDetailThree"
+                                )
+                                .textContent =
+                                    button.dataset
+                                        .detailThree
+                                    || "";
+
+                            detailsImage.src =
+                                images[0]
+                                || "";
+
+                            detailsThumbnails.innerHTML =
+                                "";
+
+                            images.forEach(
+                                function (
+                                    imageUrl,
+                                    index
+                                ) {
+                                    const thumbnail =
+                                        document
+                                            .createElement(
+                                                "button"
+                                            );
+
+                                    const image =
+                                        document
+                                            .createElement(
+                                                "img"
+                                            );
+
+                                    thumbnail.type =
+                                        "button";
+
+                                    thumbnail.className =
+                                        "public-modal-thumbnail-button";
+
+                                    thumbnail.classList.toggle(
+                                        "active",
+                                        index === 0
+                                    );
+
+                                    image.src =
+                                        imageUrl;
+
+                                    image.alt =
+                                        `Wedding image ${index + 1}`;
+
+                                    thumbnail.appendChild(
+                                        image
+                                    );
+
+                                    if (
+                                        index === 0
+                                    ) {
+                                        const badge =
+                                            document
+                                                .createElement(
+                                                    "span"
+                                                );
+
+                                        badge.className =
+                                            "public-main-thumbnail-badge";
+
+                                        badge.textContent =
+                                            "Main";
+
+                                        thumbnail.appendChild(
+                                            badge
+                                        );
+                                    }
+
+                                    thumbnail.addEventListener(
+                                        "click",
+                                        function () {
+                                            detailsImage.src =
+                                                imageUrl;
+
+                                            detailsThumbnails
+                                                .querySelectorAll(
+                                                    "button"
+                                                )
+                                                .forEach(
+                                                    function (
+                                                        item
+                                                    ) {
+                                                        item
+                                                            .classList
+                                                            .remove(
+                                                                "active"
+                                                            );
+                                                    }
+                                                );
+
+                                            thumbnail
+                                                .classList
+                                                .add(
+                                                    "active"
+                                                );
+                                        }
+                                    );
+
+                                    detailsThumbnails
+                                        .appendChild(
+                                            thumbnail
+                                        );
+                                }
+                            );
+
+                            detailsModal?.classList.add(
+                                "open"
+                            );
+
+                            detailsModal?.setAttribute(
+                                "aria-hidden",
+                                "false"
+                            );
+
+                            setPageLocked(true);
+                        }
+                    );
+                }
+            );
+
+        document
+            .getElementById(
+                "publicDetailsClose"
+            )
+            ?.addEventListener(
+                "click",
+                closeDetailsModal
+            );
+
+        detailsModal?.addEventListener(
+            "click",
+            function (event) {
+                if (
+                    event.target
+                    === detailsModal
+                ) {
+                    closeDetailsModal();
+                }
+            }
+        );
+
+        function renderGalleryImage() {
             if (
-                publicGalleryImages.length === 0
+                galleryImages.length
+                === 0
             ) {
                 return;
             }
 
             imagePreview.src =
-                publicGalleryImages[
-                    publicGalleryIndex
+                galleryImages[
+                    galleryIndex
                 ];
 
             imageCounter.textContent =
-                `${publicGalleryIndex + 1} / ${publicGalleryImages.length}`;
+                `${galleryIndex + 1} / ${galleryImages.length}`;
 
-            const hasMultipleImages =
-                publicGalleryImages.length > 1;
+            const showArrows =
+                galleryImages.length > 1;
 
             imagePrevious.hidden =
-                !hasMultipleImages;
+                !showArrows;
 
             imageNext.hidden =
-                !hasMultipleImages;
+                !showArrows;
 
             imageCounter.hidden =
-                !hasMultipleImages;
+                !showArrows;
         }
 
-        function openPublicGalleryModal(
-            images,
-            title,
-            eventType,
-            description
-        ) {
-            publicGalleryImages =
-                images.filter(
-                    function (image) {
-                        return Boolean(image);
-                    }
-                );
-
-            if (
-                publicGalleryImages.length === 0
-            ) {
-                return;
-            }
-
-            publicGalleryIndex = 0;
-
-            imageTitle.textContent =
-                title;
-
-            imageEventType.textContent =
-                eventType;
-
-            imageDescription.textContent =
-                description;
-
-            renderPublicGalleryImage();
-
-            imageModal.classList.add(
+        function closeGalleryModal() {
+            imageModal?.classList.remove(
                 "open"
             );
 
-            imageModal.setAttribute(
-                "aria-hidden",
-                "false"
-            );
-
-            document.body.style.overflow =
-                "hidden";
-        }
-
-        function closeImageModal() {
-            imageModal.classList.remove(
-                "open"
-            );
-
-            imageModal.setAttribute(
+            imageModal?.setAttribute(
                 "aria-hidden",
                 "true"
             );
 
             imagePreview.src = "";
-            imageTitle.textContent = "";
-            imageEventType.textContent = "";
-            imageDescription.textContent = "";
 
-            publicGalleryImages = [];
-            publicGalleryIndex = 0;
+            galleryImages = [];
+            galleryIndex = 0;
 
-            document.body.style.overflow = "";
+            setPageLocked(false);
         }
 
-        function showPreviousPublicGalleryImage() {
+        function showPreviousImage() {
             if (
-                publicGalleryImages.length < 2
+                galleryImages.length < 2
             ) {
                 return;
             }
 
-            publicGalleryIndex =
+            galleryIndex =
                 (
-                    publicGalleryIndex
+                    galleryIndex
                     - 1
-                    + publicGalleryImages.length
+                    + galleryImages.length
                 )
-                % publicGalleryImages.length;
+                % galleryImages.length;
 
-            renderPublicGalleryImage();
+            renderGalleryImage();
         }
 
-        function showNextPublicGalleryImage() {
+        function showNextImage() {
             if (
-                publicGalleryImages.length < 2
+                galleryImages.length < 2
             ) {
                 return;
             }
 
-            publicGalleryIndex =
+            galleryIndex =
                 (
-                    publicGalleryIndex
+                    galleryIndex
                     + 1
                 )
-                % publicGalleryImages.length;
+                % galleryImages.length;
 
-            renderPublicGalleryImage();
+            renderGalleryImage();
         }
 
         document
             .querySelectorAll(
-                "[data-public-gallery-item]"
+                "[data-public-gallery]"
             )
-            .forEach(function (galleryItem) {
-                galleryItem.addEventListener(
-                    "click",
-                    function () {
-                        openPublicGalleryModal(
-                            [
-                                galleryItem.dataset.imageOne,
-                                galleryItem.dataset.imageTwo
-                            ],
+            .forEach(
+                function (button) {
+                    button.addEventListener(
+                        "click",
+                        function () {
+                            galleryImages =
+                                parseImages(
+                                    button.dataset
+                                        .images
+                                );
 
-                            galleryItem.dataset.title,
+                            if (
+                                galleryImages.length
+                                === 0
+                            ) {
+                                return;
+                            }
 
-                            galleryItem.dataset.eventType,
+                            galleryIndex = 0;
 
-                            galleryItem.dataset.description
-                        );
-                    }
-                );
-            });
+                            document
+                                .getElementById(
+                                    "publicImageTitle"
+                                )
+                                .textContent =
+                                    button.dataset
+                                        .title
+                                    || "";
+
+                            document
+                                .getElementById(
+                                    "publicImageEventType"
+                                )
+                                .textContent =
+                                    button.dataset
+                                        .eventType
+                                    || "";
+
+                            document
+                                .getElementById(
+                                    "publicImageDescription"
+                                )
+                                .textContent =
+                                    button.dataset
+                                        .description
+                                    || "";
+
+                            renderGalleryImage();
+
+                            imageModal?.classList.add(
+                                "open"
+                            );
+
+                            imageModal?.setAttribute(
+                                "aria-hidden",
+                                "false"
+                            );
+
+                            setPageLocked(true);
+                        }
+                    );
+                }
+            );
 
         imagePrevious?.addEventListener(
             "click",
-            showPreviousPublicGalleryImage
+            showPreviousImage
         );
 
         imageNext?.addEventListener(
             "click",
-            showNextPublicGalleryImage
+            showNextImage
         );
 
-        imageClose?.addEventListener(
-            "click",
-            closeImageModal
-        );
+        document
+            .getElementById(
+                "publicImageClose"
+            )
+            ?.addEventListener(
+                "click",
+                closeGalleryModal
+            );
 
         imageModal?.addEventListener(
             "click",
             function (event) {
-                if (event.target === imageModal) {
-                    closeImageModal();
+                if (
+                    event.target
+                    === imageModal
+                ) {
+                    closeGalleryModal();
                 }
             }
         );
@@ -2327,31 +2399,40 @@ $currentYear = date('Y');
             "keydown",
             function (event) {
                 if (
-                    imageModal.classList.contains(
-                        "open"
-                    )
+                    imageModal
+                        ?.classList
+                        .contains(
+                            "open"
+                        )
                 ) {
-                    if (event.key === "ArrowLeft") {
-                        showPreviousPublicGalleryImage();
-                        return;
+                    if (
+                        event.key
+                        === "ArrowLeft"
+                    ) {
+                        showPreviousImage();
+                    } else if (
+                        event.key
+                        === "ArrowRight"
+                    ) {
+                        showNextImage();
+                    } else if (
+                        event.key
+                        === "Escape"
+                    ) {
+                        closeGalleryModal();
                     }
 
-                    if (event.key === "ArrowRight") {
-                        showNextPublicGalleryImage();
-                        return;
-                    }
-
-                    if (event.key === "Escape") {
-                        closeImageModal();
-                        return;
-                    }
+                    return;
                 }
 
                 if (
-                    event.key === "Escape"
-                    && detailsModal.classList.contains(
-                        "open"
-                    )
+                    event.key
+                    === "Escape"
+                    && detailsModal
+                        ?.classList
+                        .contains(
+                            "open"
+                        )
                 ) {
                     closeDetailsModal();
                 }

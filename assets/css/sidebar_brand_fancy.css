@@ -1,0 +1,222 @@
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Great+Vibes&display=swap");
+
+/*
+|--------------------------------------------------------------------------
+| Fancy sidebar brand
+|--------------------------------------------------------------------------
+| Styles the Wedding / Event Planner brand on Admin, Event Manager,
+| Booking Manager and Customer sidebars.
+*/
+
+.admin-logo,
+.admin-bookings-logo,
+.admin-feedback-logo,
+.admin-gallery-logo,
+.notifications-logo,
+.sidebar-logo,
+.gallery-sidebar-logo,
+.event-logo,
+.assigned-tasks-logo,
+.event-feedback-logo,
+.booking-logo,
+.customer-shared-logo,
+.customer-logo,
+.profile-logo,
+.customer-sidebar-logo,
+.customer-gallery-logo,
+.customer-package-logo,
+.customer-venue-logo {
+    position: relative !important;
+
+    margin-bottom: 20px !important;
+    padding: 4px 0 12px !important;
+
+    text-align: center !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Wedding text
+|--------------------------------------------------------------------------
+*/
+
+.admin-logo h1,
+.admin-bookings-logo h1,
+.admin-feedback-logo h1,
+.admin-gallery-logo h1,
+.notifications-logo h1,
+.sidebar-logo h1,
+.gallery-sidebar-logo h1,
+.event-logo h1,
+.assigned-tasks-logo h1,
+.event-feedback-logo h1,
+.booking-logo h1,
+.customer-shared-logo h1,
+.customer-logo h1,
+.profile-logo h1,
+.customer-sidebar-logo h1,
+.customer-gallery-logo h1,
+.customer-package-logo h1,
+.customer-venue-logo h1 {
+    margin: 0 !important;
+
+    color: #ffffff !important;
+
+    font-family:
+        "Great Vibes",
+        "Segoe Script",
+        "Brush Script MT",
+        "Lucida Handwriting",
+        cursive !important;
+
+    font-size: 47px !important;
+    font-style: normal !important;
+    font-weight: 400 !important;
+    line-height: 0.98 !important;
+    letter-spacing: 0.3px !important;
+
+    text-shadow:
+        0 3px 10px
+        rgba(62, 0, 29, 0.28) !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Event Planner text
+|--------------------------------------------------------------------------
+*/
+
+.admin-logo p,
+.admin-bookings-logo p,
+.admin-feedback-logo p,
+.admin-gallery-logo p,
+.notifications-logo p,
+.sidebar-logo p,
+.gallery-sidebar-logo p,
+.event-logo p,
+.assigned-tasks-logo p,
+.event-feedback-logo p,
+.booking-logo p,
+.customer-shared-logo p,
+.customer-logo p,
+.profile-logo p,
+.customer-sidebar-logo p,
+.customer-gallery-logo p,
+.customer-package-logo p,
+.customer-venue-logo p {
+    margin: 7px 0 0 !important;
+
+    color:
+        rgba(
+            255,
+            255,
+            255,
+            0.96
+        ) !important;
+
+    font-family:
+        "Cormorant Garamond",
+        Georgia,
+        serif !important;
+
+    font-size: 18px !important;
+    font-style: italic !important;
+    font-weight: 600 !important;
+    line-height: 1.1 !important;
+    letter-spacing: 1.2px !important;
+
+    text-shadow:
+        0 2px 7px
+        rgba(62, 0, 29, 0.22) !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Decorative line
+|--------------------------------------------------------------------------
+*/
+
+.admin-logo::after,
+.admin-bookings-logo::after,
+.admin-feedback-logo::after,
+.admin-gallery-logo::after,
+.notifications-logo::after,
+.sidebar-logo::after,
+.gallery-sidebar-logo::after,
+.event-logo::after,
+.assigned-tasks-logo::after,
+.event-feedback-logo::after,
+.booking-logo::after,
+.customer-shared-logo::after,
+.customer-logo::after,
+.profile-logo::after,
+.customer-sidebar-logo::after,
+.customer-gallery-logo::after,
+.customer-package-logo::after,
+.customer-venue-logo::after {
+    width: 78px !important;
+    height: 1px !important;
+    margin: 10px auto 0 !important;
+
+    display: block !important;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.92),
+            transparent
+        ) !important;
+
+    content: "" !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Mobile
+|--------------------------------------------------------------------------
+*/
+
+@media (max-width: 900px) {
+    .admin-logo h1,
+    .admin-bookings-logo h1,
+    .admin-feedback-logo h1,
+    .admin-gallery-logo h1,
+    .notifications-logo h1,
+    .sidebar-logo h1,
+    .gallery-sidebar-logo h1,
+    .event-logo h1,
+    .assigned-tasks-logo h1,
+    .event-feedback-logo h1,
+    .booking-logo h1,
+    .customer-shared-logo h1,
+    .customer-logo h1,
+    .profile-logo h1,
+    .customer-sidebar-logo h1,
+    .customer-gallery-logo h1,
+    .customer-package-logo h1,
+    .customer-venue-logo h1 {
+        font-size: 43px !important;
+    }
+
+    .admin-logo p,
+    .admin-bookings-logo p,
+    .admin-feedback-logo p,
+    .admin-gallery-logo p,
+    .notifications-logo p,
+    .sidebar-logo p,
+    .gallery-sidebar-logo p,
+    .event-logo p,
+    .assigned-tasks-logo p,
+    .event-feedback-logo p,
+    .booking-logo p,
+    .customer-shared-logo p,
+    .customer-logo p,
+    .profile-logo p,
+    .customer-sidebar-logo p,
+    .customer-gallery-logo p,
+    .customer-package-logo p,
+    .customer-venue-logo p {
+        font-size: 17px !important;
+    }
+}

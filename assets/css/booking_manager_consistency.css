@@ -497,3 +497,140 @@ body.all-gallery-page
         display: none !important;
     }
 }
+
+/*
+|--------------------------------------------------------------------------
+| Gallery typography consistency
+|--------------------------------------------------------------------------
+| Match the Booking Manager Wedding Gallery typography with the larger
+| Admin Manage Packages and Manage Venues pages.
+*/
+
+.gallery-page-heading h1,
+.manager-view-heading h1 {
+    color: #222222 !important;
+    font-size: 40px !important;
+    line-height: 1.2 !important;
+}
+
+.gallery-page-heading p,
+.manager-view-heading p {
+    margin-top: 6px !important;
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+}
+
+.gallery-current-date,
+.manager-view-date {
+    font-size: 14px !important;
+    line-height: 22px !important;
+}
+
+.gallery-summary-card h4,
+.manager-view-summary-card h4 {
+    font-size: 15px !important;
+    line-height: 1.35 !important;
+}
+
+.gallery-summary-card h2,
+.manager-view-summary-card h2 {
+    margin-top: 5px !important;
+    font-size: 28px !important;
+    line-height: 1.15 !important;
+}
+
+.gallery-summary-card p,
+.gallery-summary-card a,
+.manager-view-summary-card p,
+.manager-view-summary-card a {
+    margin-top: 7px !important;
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+}
+
+.gallery-list-heading h2,
+.manager-gallery-heading h2 {
+    font-size: 30px !important;
+    line-height: 1.25 !important;
+}
+
+.gallery-list-heading p,
+.manager-gallery-heading p {
+    margin-top: 6px !important;
+    font-size: 15px !important;
+    line-height: 1.55 !important;
+}
+
+.gallery-view-all-button,
+.manager-gallery-view-button,
+.manager-gallery-notice {
+    font-size: 14px !important;
+}
+
+.gallery-record-body h3,
+.manager-gallery-card-body h3 {
+    font-size: 19px !important;
+    line-height: 1.35 !important;
+}
+
+.gallery-event-type,
+.manager-gallery-event-type {
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+}
+
+.gallery-record-description,
+.manager-gallery-description {
+    font-size: 13px !important;
+    line-height: 1.55 !important;
+}
+
+.gallery-record-meta,
+.manager-gallery-meta {
+    font-size: 11px !important;
+    line-height: 1.5 !important;
+}
+
+@media (max-width: 720px) {
+    .gallery-page-heading h1,
+    .manager-view-heading h1 {
+        font-size: 30px !important;
+    }
+
+    .gallery-page-heading p,
+    .manager-view-heading p {
+        font-size: 14px !important;
+    }
+
+    .gallery-list-heading h2,
+    .manager-gallery-heading h2 {
+        font-size: 25px !important;
+    }
+
+    .gallery-list-heading p,
+    .manager-gallery-heading p {
+        font-size: 14px !important;
+    }
+}
+
+@media (max-width: 520px) {
+    .gallery-page-heading h1,
+    .manager-view-heading h1 {
+        font-size: 26px !important;
+    }
+
+    .gallery-page-heading p,
+    .manager-view-heading p {
+        font-size: 13px !important;
+    }
+
+    .gallery-summary-card h4,
+    .manager-view-summary-card h4 {
+        font-size: 14px !important;
+    }
+
+    .gallery-summary-card h2,
+    .manager-view-summary-card h2 {
+        font-size: 25px !important;
+    }
+}

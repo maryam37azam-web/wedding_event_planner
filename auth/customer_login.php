@@ -6,10 +6,16 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 if (
-    isset($_SESSION['user_id'], $_SESSION['user_role'])
-    && $_SESSION['user_role'] === 'customer'
+    isset(
+        $_SESSION['user_id'],
+        $_SESSION['user_role']
+    )
+    && $_SESSION['user_role']
+        === 'customer'
 ) {
-    redirect('/customer/dashboard.php');
+    redirect(
+        '/customer/dashboard.php'
+    );
 }
 
 $errors = [];
@@ -19,26 +25,46 @@ $email = '';
 
 if (is_post()) {
     $email = strtolower(
-        trim((string) ($_POST['email'] ?? ''))
+        trim(
+            (string) (
+                $_POST['email']
+                ?? ''
+            )
+        )
     );
 
-    $password = (string) ($_POST['password'] ?? '');
+    $password = (string) (
+        $_POST['password']
+        ?? ''
+    );
 
     $submittedToken = (string) (
-        $_POST['csrf_token'] ?? ''
+        $_POST['csrf_token']
+        ?? ''
     );
 
-    if (!verify_csrf($submittedToken)) {
+    if (
+        !verify_csrf(
+            $submittedToken
+        )
+    ) {
         $errors[] =
             'Your login session expired. Refresh the page and try again.';
     }
 
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = 'Enter a valid email address.';
+    if (
+        !filter_var(
+            $email,
+            FILTER_VALIDATE_EMAIL
+        )
+    ) {
+        $errors[] =
+            'Enter a valid email address.';
     }
 
     if ($password === '') {
-        $errors[] = 'Enter your password.';
+        $errors[] =
+            'Enter your password.';
     }
 
     if ($errors === []) {
@@ -51,7 +77,6 @@ if (is_post()) {
                     phone,
                     password,
                     role,
-                    is_verified,
                     is_active
                  FROM users
                  WHERE email = ?
@@ -64,48 +89,79 @@ if (is_post()) {
                 'customer',
             ]);
 
-            $user = $statement->fetch();
+            $user =
+                $statement->fetch();
 
             if (
                 !$user
                 || !password_verify(
                     $password,
-                    (string) $user['password']
+                    (string) (
+                        $user['password']
+                    )
                 )
             ) {
                 $errors[] =
                     'The email address or password is incorrect.';
-            } elseif ((int) $user['is_active'] !== 1) {
+            } elseif (
+                (int) $user[
+                    'is_active'
+                ] !== 1
+            ) {
                 $errors[] =
                     'Your account is currently inactive. Please contact support.';
-            } elseif ((int) $user['is_verified'] !== 1) {
-                $_SESSION['pending_verification_user_id']
-                    = (int) $user['id'];
-
-                $_SESSION['pending_verification_email']
-                    = (string) $user['email'];
-
-                set_flash(
-                    'error',
-                    'Verify your email address before logging in.'
-                );
-
-                redirect('/auth/verify_otp.php');
             } else {
-                session_regenerate_id(true);
-
-                $_SESSION['user_id'] = (int) $user['id'];
-                $_SESSION['user_role'] = 'customer';
-                $_SESSION['user_name'] =
-                    (string) $user['full_name'];
-                $_SESSION['user_email'] =
-                    (string) $user['email'];
-
-                $updateStatement = db()->prepare(
-                    'UPDATE users
-                     SET last_login_at = NOW()
-                     WHERE id = ?'
+                session_regenerate_id(
+                    true
                 );
+
+                $_SESSION['user_id'] =
+                    (int) $user['id'];
+
+                $_SESSION['user_role'] =
+                    'customer';
+
+                $_SESSION['user_name'] =
+                    (string) (
+                        $user['full_name']
+                    );
+
+                $_SESSION['user_email'] =
+                    (string) (
+                        $user['email']
+                    );
+
+                unset(
+                    $_SESSION[
+                        'pending_verification_user_id'
+                    ],
+                    $_SESSION[
+                        'pending_verification_email'
+                    ],
+                    $_SESSION[
+                        'otp_last_sent_at'
+                    ],
+                    $_SESSION[
+                        'recently_verified_email'
+                    ]
+                );
+
+                /*
+                 * Older accounts created before
+                 * verification was removed are also
+                 * activated as verified on login.
+                 */
+                $updateStatement =
+                    db()->prepare(
+                        'UPDATE users
+                         SET last_login_at = NOW(),
+                             is_verified = 1,
+                             email_verified_at = COALESCE(
+                                 email_verified_at,
+                                 NOW()
+                             )
+                         WHERE id = ?'
+                    );
 
                 $updateStatement->execute([
                     (int) $user['id'],
@@ -115,12 +171,19 @@ if (is_post()) {
                  * If login was required during booking,
                  * return the customer to that page.
                  */
-                $redirectAfterLogin = (string) (
-                    $_SESSION['redirect_after_login']
-                    ?? '/customer/dashboard.php'
-                );
+                $redirectAfterLogin =
+                    (string) (
+                        $_SESSION[
+                            'redirect_after_login'
+                        ]
+                        ?? '/customer/dashboard.php'
+                    );
 
-                unset($_SESSION['redirect_after_login']);
+                unset(
+                    $_SESSION[
+                        'redirect_after_login'
+                    ]
+                );
 
                 if (
                     !str_starts_with(
@@ -132,11 +195,15 @@ if (is_post()) {
                         '/customer/dashboard.php';
                 }
 
-                redirect($redirectAfterLogin);
+                redirect(
+                    $redirectAfterLogin
+                );
             }
         } catch (Throwable $exception) {
             $errors[] = APP_DEBUG
-                ? 'Login failed: ' . $exception->getMessage()
+                ? 'Login failed: '
+                    . $exception
+                        ->getMessage()
                 : 'Login failed. Please try again.';
         }
     }
@@ -152,7 +219,9 @@ if (is_post()) {
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>Customer Login | <?= e(APP_NAME) ?></title>
+    <title>
+        Customer Login | <?= e(APP_NAME) ?>
+    </title>
 
     <?php require __DIR__ . '/../includes/pwa_head.php'; ?>
 
@@ -163,7 +232,11 @@ if (is_post()) {
 
     <link
         rel="stylesheet"
-        href="<?= e(url('/assets/css/auth.css')) ?>"
+        href="<?= e(
+            url(
+                '/assets/css/auth.css'
+            )
+        ) ?>"
     >
 </head>
 
@@ -184,30 +257,50 @@ if (is_post()) {
         </div>
 
         <?php if ($flash): ?>
+
             <div
                 class="alert <?= $flash['type'] === 'success'
                     ? 'alert-success'
                     : 'alert-danger' ?>"
             >
-                <?= e($flash['message']) ?>
+                <?= e(
+                    $flash['message']
+                ) ?>
             </div>
+
         <?php endif; ?>
 
         <?php if ($errors !== []): ?>
+
             <div class="alert alert-danger">
+
                 <ul>
-                    <?php foreach ($errors as $error): ?>
-                        <li><?= e($error) ?></li>
+
+                    <?php foreach (
+                        $errors as $error
+                    ): ?>
+
+                        <li>
+                            <?= e($error) ?>
+                        </li>
+
                     <?php endforeach; ?>
+
                 </ul>
+
             </div>
+
         <?php endif; ?>
 
-        <form method="post" autocomplete="on">
+        <form
+            method="post"
+            autocomplete="on"
+        >
 
             <?= csrf_field() ?>
 
             <div class="input-box">
+
                 <i class="fa-solid fa-envelope"></i>
 
                 <input
@@ -220,9 +313,11 @@ if (is_post()) {
                     autocomplete="email"
                     required
                 >
+
             </div>
 
             <div class="input-box">
+
                 <i class="fa-solid fa-lock"></i>
 
                 <input
@@ -241,6 +336,7 @@ if (is_post()) {
                 >
                     Show
                 </button>
+
             </div>
 
             <div
@@ -251,7 +347,11 @@ if (is_post()) {
                 "
             >
                 <a
-                    href="<?= e(url('/auth/forgot_password.php')) ?>"
+                    href="<?= e(
+                        url(
+                            '/auth/forgot_password.php'
+                        )
+                    ) ?>"
                     style="
                         color:#ffffff;
                         font-size:14px;
@@ -263,52 +363,80 @@ if (is_post()) {
                 </a>
             </div>
 
-            <button class="auth-button" type="submit">
+            <button
+                class="auth-button"
+                type="submit"
+            >
                 Login
             </button>
 
         </form>
 
         <div class="auth-footer">
+
             Do not have a customer account?<br>
 
-            <a href="<?= e(url('/auth/register.php')) ?>">
+            <a
+                href="<?= e(
+                    url(
+                        '/auth/register.php'
+                    )
+                ) ?>"
+            >
                 Create Account
             </a>
 
             <br>
 
-            <a href="<?= e(url('/')) ?>">
+            <a
+                href="<?= e(
+                    url('/')
+                ) ?>"
+            >
                 Return to Website
             </a>
+
         </div>
 
     </main>
 
     <script>
         document
-            .querySelectorAll("[data-password-target]")
-            .forEach(function (button) {
-                button.addEventListener("click", function () {
-                    const field = document.getElementById(
-                        button.dataset.passwordTarget
+            .querySelectorAll(
+                "[data-password-target]"
+            )
+            .forEach(
+                function (button) {
+                    button.addEventListener(
+                        "click",
+                        function () {
+                            const field =
+                                document.getElementById(
+                                    button.dataset
+                                        .passwordTarget
+                                );
+
+                            if (!field) {
+                                return;
+                            }
+
+                            const isHidden =
+                                field.type
+                                === "password";
+
+                            field.type =
+                                isHidden
+                                    ? "text"
+                                    : "password";
+
+                            button.textContent =
+                                isHidden
+                                    ? "Hide"
+                                    : "Show";
+                        }
                     );
-
-                    if (!field) {
-                        return;
-                    }
-
-                    const isHidden = field.type === "password";
-
-                    field.type = isHidden
-                        ? "text"
-                        : "password";
-
-                    button.textContent = isHidden
-                        ? "Hide"
-                        : "Show";
-                });
-            });
+                }
+            );
     </script>
 
     <?php require __DIR__ . '/../includes/pwa_scripts.php'; ?>

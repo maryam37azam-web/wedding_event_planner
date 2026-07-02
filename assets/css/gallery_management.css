@@ -1154,26 +1154,35 @@ input[type="file"]::file-selector-button {
     filter: grayscale(1);
 }
 
-.gallery-remove-second-button {
+.gallery-remove-image-option {
     margin-top: 9px;
-    min-height: 34px;
-    padding: 7px 10px;
 
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 6px;
+    gap: 7px;
 
-    border: 1px solid #ffc3cf;
-    border-radius: 7px;
-
-    background: #fff1f3;
     color: #bd244c;
 
     cursor: pointer;
 
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
+    line-height: 1.4;
+}
+
+.gallery-remove-image-option input {
+    width: 16px;
+    height: 16px;
+
+    flex: 0 0 16px;
+
+    cursor: pointer;
+
+    accent-color: var(--gallery-primary);
+}
+
+.gallery-remove-image-option span {
+    color: #bd244c;
 }
 
 .gallery-visibility-option {
@@ -1768,5 +1777,198 @@ input[type="file"]::file-selector-button {
     .gallery-top-profile-image {
         width: 44px;
         height: 44px;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Final shared gallery typography
+|--------------------------------------------------------------------------
+| These rules apply to Admin, Event Manager and Booking Manager gallery
+| pages because all three pages use the shared gallery page structure.
+*/
+
+body.gallery-role-page .gallery-page-heading h1 {
+    margin: 0 !important;
+
+    color: #222222 !important;
+
+    font-size: 40px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+}
+
+body.gallery-role-page .gallery-page-heading p {
+    margin-top: 7px !important;
+
+    color: #756b71 !important;
+
+    font-size: 17px !important;
+    font-weight: 400 !important;
+    line-height: 1.5 !important;
+}
+
+body.gallery-role-page .gallery-current-date {
+    font-size: 14px !important;
+    line-height: 22px !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Summary-card text
+|--------------------------------------------------------------------------
+*/
+
+body.gallery-role-page .gallery-summary-card h4 {
+    margin-bottom: 5px !important;
+
+    color: #6f666c !important;
+
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    line-height: 1.35 !important;
+}
+
+body.gallery-role-page .gallery-summary-card h2 {
+    margin-top: 0 !important;
+
+    color: #a4004d !important;
+
+    font-size: 30px !important;
+    font-weight: 700 !important;
+    line-height: 1.15 !important;
+}
+
+body.gallery-role-page .gallery-summary-card p {
+    margin-top: 7px !important;
+
+    color: #a4004d !important;
+
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    line-height: 1.4 !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Latest Gallery Images section
+|--------------------------------------------------------------------------
+*/
+
+body.gallery-role-page .gallery-list-heading h2 {
+    margin: 0 !important;
+
+    color: #a4004d !important;
+
+    font-size: 30px !important;
+    font-weight: 700 !important;
+    line-height: 1.25 !important;
+}
+
+body.gallery-role-page .gallery-list-heading p {
+    margin-top: 7px !important;
+
+    color: #756b71 !important;
+
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+}
+
+body.gallery-role-page .gallery-add-button,
+body.gallery-role-page .gallery-view-all-button {
+    min-height: 46px !important;
+    padding: 11px 18px !important;
+
+    font-size: 14px !important;
+    font-weight: 700 !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Gallery-card text
+|--------------------------------------------------------------------------
+*/
+
+body.gallery-role-page .gallery-record-body h3 {
+    color: #a4004d !important;
+
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    line-height: 1.35 !important;
+}
+
+body.gallery-role-page .gallery-event-type {
+    margin-top: 6px !important;
+
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+}
+
+body.gallery-role-page .gallery-record-description {
+    margin-top: 8px !important;
+
+    font-size: 13px !important;
+    line-height: 1.55 !important;
+}
+
+body.gallery-role-page .gallery-record-meta {
+    font-size: 11px !important;
+    line-height: 1.5 !important;
+}
+
+body.gallery-role-page .gallery-edit-button,
+body.gallery-role-page .gallery-delete-button {
+    min-height: 39px !important;
+
+    font-size: 12px !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Responsive typography
+|--------------------------------------------------------------------------
+*/
+
+@media (max-width: 720px) {
+    body.gallery-role-page .gallery-page-heading h1 {
+        font-size: 31px !important;
+    }
+
+    body.gallery-role-page .gallery-page-heading p {
+        font-size: 15px !important;
+    }
+
+    body.gallery-role-page .gallery-list-heading h2 {
+        font-size: 26px !important;
+    }
+
+    body.gallery-role-page .gallery-list-heading p {
+        font-size: 14px !important;
+    }
+
+    body.gallery-role-page .gallery-summary-card h4 {
+        font-size: 15px !important;
+    }
+
+    body.gallery-role-page .gallery-summary-card h2 {
+        font-size: 27px !important;
+    }
+}
+
+@media (max-width: 560px) {
+    body.gallery-role-page .gallery-page-heading h1 {
+        font-size: 27px !important;
+    }
+
+    body.gallery-role-page .gallery-page-heading p {
+        font-size: 14px !important;
+    }
+
+    body.gallery-role-page .gallery-list-heading h2 {
+        font-size: 24px !important;
+    }
+
+    body.gallery-role-page .gallery-record-body h3 {
+        font-size: 18px !important;
     }
 }

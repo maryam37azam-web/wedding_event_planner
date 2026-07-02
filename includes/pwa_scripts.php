@@ -7,7 +7,10 @@ require_once __DIR__ . '/functions.php';
 $weddingScriptName = str_replace(
     '\\',
     '/',
-    (string) ($_SERVER['SCRIPT_NAME'] ?? '')
+    (string) (
+        $_SERVER['SCRIPT_NAME']
+        ?? ''
+    )
 );
 
 $weddingCurrentRole = (string) (
@@ -60,11 +63,35 @@ $weddingCustomerUiEnabled =
             '/gallery/'
         )
     );
+
 ?>
 
 <script
     src="<?= e(
         url('/assets/js/pwa.js')
+    ) ?>"
+    defer
+></script>
+
+<script
+    src="<?= e(
+        url(
+            '/assets/js/image_file_clear.js'
+            . '?v=20260702-1'
+        )
+    ) ?>"
+    defer
+></script>
+
+<script
+    src="<?= e(
+        url(
+            '/assets/js/view_all_back_button.js'
+            . '?v=20260701-1'
+        )
+    ) ?>"
+    data-current-role="<?= e(
+        $weddingCurrentRole
     ) ?>"
     defer
 ></script>
@@ -76,7 +103,8 @@ $weddingCustomerUiEnabled =
     <script
         src="<?= e(
             url(
-                '/assets/js/admin_consistency.js?v=20260628-1'
+                '/assets/js/admin_consistency.js'
+                . '?v=20260703-3'
             )
         ) ?>"
         defer

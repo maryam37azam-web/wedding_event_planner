@@ -1,0 +1,103 @@
+/*
+|--------------------------------------------------------------------------
+| Admin package and venue card text polish
+|--------------------------------------------------------------------------
+*/
+
+.package-card h3,
+.venue-card h3,
+.all-package-card h2,
+.all-venue-card h2 {
+    margin-bottom: 7px !important;
+
+    font-weight: 800 !important;
+    letter-spacing: -0.15px !important;
+}
+
+.package-card-description,
+.venue-card-description,
+.all-package-description,
+.all-venue-description {
+    min-height: 0 !important;
+    margin: 0 0 13px !important;
+    padding: 9px 11px !important;
+
+    display: block !important;
+    overflow: visible !important;
+
+    border-left: 3px solid #ff3f7f !important;
+    border-radius: 0 9px 9px 0 !important;
+
+    background:
+        linear-gradient(
+            90deg,
+            #fff2f7 0%,
+            #fffafd 58%,
+            #ffffff 100%
+        ) !important;
+
+    color: #1b1a1d !important;
+
+    font-family:
+        system-ui,
+        -apple-system,
+        "Segoe UI",
+        sans-serif !important;
+
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+
+    box-shadow:
+        inset 0 0 0 1px
+        rgba(255, 63, 127, 0.05) !important;
+}
+
+.admin-card-price-text {
+    margin: 0 0 3px !important;
+
+    display: block !important;
+
+    color: #111318 !important;
+
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    line-height: 1.35 !important;
+    letter-spacing: 0.1px !important;
+}
+
+.admin-card-description-text {
+    margin: 0 !important;
+
+    display: block !important;
+
+    color: #29262b !important;
+
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1.5 !important;
+    letter-spacing: 0.05px !important;
+}
+
+.all-package-description,
+.all-venue-description {
+    margin-bottom: 10px !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+}
+
+@media (max-width: 600px) {
+    .package-card-description,
+    .venue-card-description,
+    .all-package-description,
+    .all-venue-description {
+        padding: 8px 9px !important;
+    }
+
+    .admin-card-price-text {
+        font-size: 14px !important;
+    }
+
+    .admin-card-description-text {
+        font-size: 12px !important;
+    }
+}
