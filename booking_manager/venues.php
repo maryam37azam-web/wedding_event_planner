@@ -9,7 +9,11 @@ require_once __DIR__ . '/../includes/venue_helpers.php';
 require_role('booking_manager');
 
 $connection = db();
-$bookingManagerId = (int) $_SESSION['user_id'];
+
+$bookingManagerId = (int) (
+    $_SESSION['user_id']
+    ?? 0
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -17,7 +21,9 @@ $bookingManagerId = (int) $_SESSION['user_id'];
 |--------------------------------------------------------------------------
 */
 
-$venuePrice = static function (array $venue): float {
+$priceOf = static function (
+    array $venue
+): float {
     foreach (
         [
             'price',
@@ -34,10 +40,12 @@ $venuePrice = static function (array $venue): float {
         }
     }
 
-    return 0;
+    return 0.0;
 };
 
-$venueCapacity = static function (array $venue): int {
+$capacityOf = static function (
+    array $venue
+): int {
     foreach (
         [
             'capacity',
@@ -57,58 +65,56 @@ $venueCapacity = static function (array $venue): int {
     return 0;
 };
 
-$venueFacilities = static function (
-    mixed $rawFacilities
+$facilitiesOf = static function (
+    mixed $value
 ): array {
-    if (is_array($rawFacilities)) {
-        $facilities = $rawFacilities;
+    if (is_array($value)) {
+        $items = $value;
     } else {
-        $facilityText = trim(
-            (string) $rawFacilities
+        $text = trim(
+            (string) $value
         );
 
-        if ($facilityText === '') {
+        if ($text === '') {
             return [];
         }
 
-        $decodedFacilities = json_decode(
-            $facilityText,
+        $decoded = json_decode(
+            $text,
             true
         );
 
-        if (
+        $items =
             json_last_error() === JSON_ERROR_NONE
-            && is_array($decodedFacilities)
-        ) {
-            $facilities = $decodedFacilities;
-        } else {
-            $facilities = preg_split(
-                '/[\r\n,;|]+/u',
-                $facilityText
-            ) ?: [];
-        }
+            && is_array($decoded)
+                ? $decoded
+                : (
+                    preg_split(
+                        '/[\r\n,;|]+/u',
+                        $text
+                    )
+                    ?: []
+                );
     }
 
-    $cleanFacilities = [];
+    $clean = [];
 
-    foreach ($facilities as $facility) {
-        $facility = trim(
-            (string) $facility
+    foreach ($items as $item) {
+        $item = trim(
+            (string) $item
         );
 
-        if ($facility === '') {
-            continue;
+        if ($item !== '') {
+            $clean[] = $item;
         }
-
-        $cleanFacilities[] = $facility;
     }
 
     return array_values(
-        array_unique($cleanFacilities)
+        array_unique($clean)
     );
 };
 
-$formatVenuePrice = static function (
+$formatPrice = static function (
     float $price
 ): string {
     return 'Rs. ' . number_format(
@@ -119,7 +125,7 @@ $formatVenuePrice = static function (
 
 /*
 |--------------------------------------------------------------------------
-| Load Booking Manager
+| Booking Manager profile
 |--------------------------------------------------------------------------
 */
 
@@ -131,7 +137,7 @@ $managerStatement = $connection->prepare(
         about
      FROM users
      WHERE id = ?
-     AND role = ?
+       AND role = ?
      LIMIT 1'
 );
 
@@ -146,7 +152,9 @@ if (!$manager) {
     redirect('/auth/logout.php');
 }
 
-$managerImage = !empty($manager['profile_image'])
+$managerImage = !empty(
+    $manager['profile_image']
+)
     ? url(
         '/'
         . ltrim(
@@ -157,7 +165,10 @@ $managerImage = !empty($manager['profile_image'])
     : url('/assets/icons/icon-192.png');
 
 $managerAbout = trim(
-    (string) ($manager['about'] ?? '')
+    (string) (
+        $manager['about']
+        ?? ''
+    )
 );
 
 if ($managerAbout === '') {
@@ -174,7 +185,7 @@ $notificationStatement = $connection->prepare(
     'SELECT COUNT(*)
      FROM notifications
      WHERE recipient_id = ?
-     AND is_read = 0'
+       AND is_read = 0'
 );
 
 $notificationStatement->execute([
@@ -186,54 +197,137 @@ $unreadNotifications =
 
 /*
 |--------------------------------------------------------------------------
-| Active venue records
+| Venue summary data
 |--------------------------------------------------------------------------
 */
 
-$activeVenueStatement = $connection->query(
-    "SELECT *
-     FROM venues
-     WHERE status = 'active'
-     ORDER BY created_at DESC, id DESC"
+$allVenueRows = $connection
+    ->query(
+        "SELECT *
+         FROM venues
+         ORDER BY created_at DESC, id DESC"
+    )
+    ->fetchAll();
+
+$totalVenues = count(
+    $allVenueRows
 );
 
-$activeVenueRows =
-    $activeVenueStatement->fetchAll();
+$activeVenueRows = array_values(
+    array_filter(
+        $allVenueRows,
+        static function (
+            array $venue
+        ): bool {
+            return strtolower(
+                trim(
+                    (string) (
+                        $venue['status']
+                        ?? ''
+                    )
+                )
+            ) === 'active';
+        }
+    )
+);
+
+$inactiveVenueRows = array_values(
+    array_filter(
+        $allVenueRows,
+        static function (
+            array $venue
+        ): bool {
+            return strtolower(
+                trim(
+                    (string) (
+                        $venue['status']
+                        ?? ''
+                    )
+                )
+            ) !== 'active';
+        }
+    )
+);
 
 $activeVenues = count(
     $activeVenueRows
 );
 
-$startingPrice = 0.0;
+$inactiveVenues = count(
+    $inactiveVenueRows
+);
+
 $maximumCapacity = 0;
 
 if ($activeVenueRows !== []) {
-    $venuePrices = array_map(
-        $venuePrice,
-        $activeVenueRows
-    );
-
-    $positivePrices = array_values(
-        array_filter(
-            $venuePrices,
-            static fn (float $price): bool =>
-                $price > 0
-        )
-    );
-
-    if ($positivePrices !== []) {
-        $startingPrice = min(
-            $positivePrices
-        );
-    }
-
     $maximumCapacity = max(
         array_map(
-            $venueCapacity,
+            $capacityOf,
             $activeVenueRows
         )
     );
 }
+
+/*
+|--------------------------------------------------------------------------
+| Most-booked venue
+|--------------------------------------------------------------------------
+*/
+
+$topVenueName = '';
+$topVenueBookings = 0;
+
+try {
+    $topVenue = $connection
+        ->query(
+            "SELECT
+                v.name,
+                COUNT(b.id) AS booking_count
+             FROM venues AS v
+             INNER JOIN bookings AS b
+                ON b.venue_id = v.id
+             WHERE LOWER(
+                COALESCE(
+                    b.status,
+                    ''
+                )
+             ) NOT IN (
+                'cancelled',
+                'canceled'
+             )
+             GROUP BY
+                v.id,
+                v.name
+             ORDER BY
+                booking_count DESC,
+                v.name ASC
+             LIMIT 1"
+        )
+        ->fetch();
+
+    if ($topVenue) {
+        $topVenueName = trim(
+            (string) (
+                $topVenue['name']
+                ?? ''
+            )
+        );
+
+        $topVenueBookings = (int) (
+            $topVenue['booking_count']
+            ?? 0
+        );
+    }
+} catch (PDOException) {
+    $topVenueName = '';
+    $topVenueBookings = 0;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Latest active venues
+|--------------------------------------------------------------------------
+*/
 
 $venues = array_slice(
     $activeVenueRows,
@@ -242,6 +336,7 @@ $venues = array_slice(
 );
 
 $currentYear = date('Y');
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -267,21 +362,27 @@ $currentYear = date('Y');
     <link
         rel="stylesheet"
         href="<?= e(
-            url('/assets/css/booking_manager_dashboard.css')
+            url(
+                '/assets/css/booking_manager_dashboard.css'
+            )
         ) ?>"
     >
 
     <link
         rel="stylesheet"
         href="<?= e(
-            url('/assets/css/booking_manager_views.css')
+            url(
+                '/assets/css/booking_manager_views.css'
+            )
         ) ?>"
     >
 
     <link
         rel="stylesheet"
         href="<?= e(
-            url('/assets/css/booking_manager_venues.css')
+            url(
+                '/assets/css/booking_manager_venues.css'
+            )
         ) ?>"
     >
 </head>
@@ -324,42 +425,54 @@ $currentYear = date('Y');
         <nav class="booking-menu">
 
             <a href="<?= e(
-                url('/booking_manager/dashboard.php')
+                url(
+                    '/booking_manager/dashboard.php'
+                )
             ) ?>">
                 <i class="fa-solid fa-gauge"></i>
                 Dashboard
             </a>
 
             <a href="<?= e(
-                url('/booking_manager/bookings.php')
+                url(
+                    '/booking_manager/bookings.php'
+                )
             ) ?>">
                 <i class="fa-solid fa-calendar-check"></i>
                 Manage Bookings
             </a>
 
             <a href="<?= e(
-                url('/booking_manager/booking.php')
+                url(
+                    '/booking_manager/booking.php'
+                )
             ) ?>">
                 <i class="fa-solid fa-calendar-plus"></i>
                 Create Booking
             </a>
 
             <a href="<?= e(
-                url('/booking_manager/services.php')
+                url(
+                    '/booking_manager/services.php'
+                )
             ) ?>">
                 <i class="fa-solid fa-bell-concierge"></i>
                 View Services
             </a>
 
             <a href="<?= e(
-                url('/booking_manager/gallery.php')
+                url(
+                    '/booking_manager/gallery.php'
+                )
             ) ?>">
                 <i class="fa-solid fa-images"></i>
                 View Gallery
             </a>
 
             <a href="<?= e(
-                url('/booking_manager/packages.php')
+                url(
+                    '/booking_manager/packages.php'
+                )
             ) ?>">
                 <i class="fa-solid fa-gift"></i>
                 View Packages
@@ -368,7 +481,9 @@ $currentYear = date('Y');
             <a
                 class="active"
                 href="<?= e(
-                    url('/booking_manager/venues.php')
+                    url(
+                        '/booking_manager/venues.php'
+                    )
                 ) ?>"
             >
                 <i class="fa-solid fa-hotel"></i>
@@ -376,14 +491,18 @@ $currentYear = date('Y');
             </a>
 
             <a href="<?= e(
-                url('/booking_manager/profile.php')
+                url(
+                    '/booking_manager/profile.php'
+                )
             ) ?>">
                 <i class="fa-solid fa-user"></i>
                 Manage Profile
             </a>
 
             <a href="<?= e(
-                url('/booking_manager/notifications.php')
+                url(
+                    '/booking_manager/notifications.php'
+                )
             ) ?>">
                 <i class="fa-solid fa-bell"></i>
                 View Notifications
@@ -392,7 +511,9 @@ $currentYear = date('Y');
             <a
                 class="booking-logout"
                 href="<?= e(
-                    url('/auth/logout.php')
+                    url(
+                        '/auth/logout.php'
+                    )
                 ) ?>"
             >
                 <i class="fa-solid fa-right-from-bracket"></i>
@@ -444,51 +565,101 @@ $currentYear = date('Y');
                 </div>
 
                 <a
-                    class="booking-notification"
-                    href="<?= e(
-                        url('/booking_manager/notifications.php')
-                    ) ?>"
-                    aria-label="Open notifications"
-                >
-                    <i class="fa-solid fa-bell"></i>
+    class="booking-notification"
+    href="<?= e(
+        url(
+            '/booking_manager/notifications.php'
+        )
+    ) ?>"
+    aria-label="Open notifications"
+>
+    <i class="fa-solid fa-bell"></i>
 
-                    <?php if ($unreadNotifications > 0): ?>
+    <?php if (
+        $unreadNotifications > 0
+    ): ?>
 
-                        <span>
-                            <?= e(
-                                $unreadNotifications > 99
-                                    ? '99+'
-                                    : (string) $unreadNotifications
-                            ) ?>
-                        </span>
+        <span>
+            <?= e(
+                $unreadNotifications > 99
+                    ? '99+'
+                    : (string) $unreadNotifications
+            ) ?>
+        </span>
 
-                    <?php endif; ?>
-
-                </a>
+    <?php endif; ?>
+</a>
 
                 <a href="<?= e(
-                    url('/booking_manager/profile.php')
+                    url(
+                        '/booking_manager/profile.php'
+                    )
                 ) ?>">
+
                     <img
                         class="booking-profile-image"
                         src="<?= e($managerImage) ?>"
                         alt="Booking Manager profile"
                     >
+
                 </a>
 
             </div>
 
         </header>
 
-        <section class="manager-view-summary">
+        <section
+            class="manager-view-summary manager-venue-summary"
+        >
 
-            <article class="manager-view-summary-card">
+            <a
+                class="manager-view-summary-card manager-venue-summary-card manager-venue-summary-total"
+                href="<?= e(
+                    url(
+                        '/booking_manager/all_venues.php?status=all'
+                    )
+                ) ?>"
+            >
 
-                <div class="manager-view-summary-icon">
+                <div
+                    class="manager-view-summary-icon manager-venue-summary-icon"
+                >
                     <i class="fa-solid fa-hotel"></i>
                 </div>
 
-                <div>
+                <div class="manager-venue-summary-content">
+
+                    <h4>Total Venues</h4>
+
+                    <h2>
+                        <?= e(
+                            (string) $totalVenues
+                        ) ?>
+                    </h2>
+
+                    <p>Click to show all</p>
+
+                </div>
+
+            </a>
+
+            <a
+                class="manager-view-summary-card manager-venue-summary-card manager-venue-summary-active"
+                href="<?= e(
+                    url(
+                        '/booking_manager/all_venues.php?status=active'
+                    )
+                ) ?>"
+            >
+
+                <div
+                    class="manager-view-summary-icon manager-venue-summary-icon"
+                >
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+
+                <div class="manager-venue-summary-content">
+
                     <h4>Active Venues</h4>
 
                     <h2>
@@ -496,39 +667,87 @@ $currentYear = date('Y');
                             (string) $activeVenues
                         ) ?>
                     </h2>
+
+                    <p>Visible on website</p>
+
                 </div>
 
-            </article>
+            </a>
 
-            <article class="manager-view-summary-card">
+            <a
+                class="manager-view-summary-card manager-venue-summary-card manager-venue-summary-inactive"
+                href="<?= e(
+                    url(
+                        '/booking_manager/all_venues.php?status=inactive'
+                    )
+                ) ?>"
+            >
 
-                <div class="manager-view-summary-icon">
-                    <i class="fa-solid fa-calendar-check"></i>
+                <div
+                    class="manager-view-summary-icon manager-venue-summary-icon"
+                >
+                    <i class="fa-solid fa-circle-pause"></i>
                 </div>
 
-                <div>
-                    <h4>Date Availability</h4>
-                    <h2>Live Check</h2>
-                </div>
+                <div class="manager-venue-summary-content">
 
-            </article>
-
-            <article class="manager-view-summary-card">
-
-                <div class="manager-view-summary-icon">
-                    <i class="fa-solid fa-money-bill-wave"></i>
-                </div>
-
-                <div>
-                    <h4>Starting Price</h4>
+                    <h4>Inactive Venues</h4>
 
                     <h2>
                         <?= e(
-                            $formatVenuePrice(
-                                $startingPrice
-                            )
+                            (string) $inactiveVenues
                         ) ?>
                     </h2>
+
+                    <p>Hidden from website</p>
+
+                </div>
+
+            </a>
+
+            <article
+                class="manager-view-summary-card manager-venue-summary-card manager-venue-summary-popular"
+            >
+
+                <div
+                    class="manager-view-summary-icon manager-venue-summary-icon"
+                >
+                    <i class="fa-solid fa-star"></i>
+                </div>
+
+                <div class="manager-venue-summary-content">
+
+                    <h4>Top Venue</h4>
+
+                    <h2
+                        title="<?= e(
+                            $topVenueName !== ''
+                                ? $topVenueName
+                                : 'No booking yet'
+                        ) ?>"
+                    >
+                        <?= e(
+                            $topVenueName !== ''
+                                ? $topVenueName
+                                : 'No booking yet'
+                        ) ?>
+                    </h2>
+
+                    <p>
+                        <?= e(
+                            $topVenueBookings > 0
+                                ? number_format(
+                                    $topVenueBookings
+                                )
+                                    . (
+                                        $topVenueBookings === 1
+                                            ? ' booking'
+                                            : ' bookings'
+                                    )
+                                : 'Based on bookings'
+                        ) ?>
+                    </p>
+
                 </div>
 
             </article>
@@ -560,7 +779,9 @@ $currentYear = date('Y');
                 <a
                     class="manager-venue-view-all"
                     href="<?= e(
-                        url('/booking_manager/all_venues.php')
+                        url(
+                            '/booking_manager/all_venues.php'
+                        )
                     ) ?>"
                 >
                     <i class="fa-solid fa-table-cells-large"></i>
@@ -569,13 +790,17 @@ $currentYear = date('Y');
 
             </div>
 
-            <?php if ($venues === []): ?>
+            <?php if (
+                $venues === []
+            ): ?>
 
                 <div class="manager-venue-empty">
 
                     <i class="fa-solid fa-hotel"></i>
 
-                    <h3>No active venues found</h3>
+                    <h3>
+                        No active venues found
+                    </h3>
 
                     <p>
                         Venues activated by the Admin will appear here automatically.
@@ -587,10 +812,59 @@ $currentYear = date('Y');
 
                 <div class="manager-venue-grid">
 
-                    <?php foreach ($venues as $venue): ?>
+                    <?php foreach (
+                        $venues as $venue
+                    ): ?>
+
                         <?php
-                        $venueId =
-                            (int) $venue['id'];
+
+                        $venueId = (int) (
+                            $venue['id']
+                            ?? 0
+                        );
+
+                        $venueName = trim(
+                            (string) (
+                                $venue['name']
+                                ?? ''
+                            )
+                        );
+
+                        $location = trim(
+                            (string) (
+                                $venue['location']
+                                ?? ''
+                            )
+                        );
+
+                        $description = trim(
+                            (string) (
+                                $venue['description']
+                                ?? ''
+                            )
+                        );
+
+                        if ($venueName === '') {
+                            $venueName =
+                                'Untitled Venue';
+                        }
+
+                        if ($location === '') {
+                            $location =
+                                'Location not specified';
+                        }
+
+                        if ($description === '') {
+                            $description =
+                                venue_card_description(
+                                    $venue
+                                );
+                        }
+
+                        if ($description === '') {
+                            $description =
+                                'Wedding venue available for customer bookings.';
+                        }
 
                         $mainImage =
                             venue_image_url(
@@ -610,105 +884,57 @@ $currentYear = date('Y');
                                 'image_one',
                                 'image_two',
                                 'image_three',
-                            ] as $imageColumn
+                            ] as $column
                         ) {
-                            $imagePath = trim(
+                            $path = trim(
                                 (string) (
-                                    $venue[$imageColumn]
+                                    $venue[$column]
                                     ?? ''
                                 )
                             );
 
-                            if ($imagePath === '') {
-                                continue;
+                            if ($path !== '') {
+                                $previewImages[] = [
+                                    'url' =>
+                                        venue_image_url(
+                                            $path
+                                        ),
+
+                                    'is_main' =>
+                                        false,
+                                ];
                             }
-
-                            $previewImages[] = [
-                                'url' =>
-                                    venue_image_url(
-                                        $imagePath
-                                    ),
-
-                                'is_main' => false,
-                            ];
-                        }
-
-                        $venueName = trim(
-                            (string) (
-                                $venue['name']
-                                ?? ''
-                            )
-                        );
-
-                        if ($venueName === '') {
-                            $venueName =
-                                'Untitled Venue';
-                        }
-
-                        $location = trim(
-                            (string) (
-                                $venue['location']
-                                ?? ''
-                            )
-                        );
-
-                        if ($location === '') {
-                            $location =
-                                'Location not specified';
-                        }
-
-                        $description = trim(
-                            (string) (
-                                $venue['description']
-                                ?? ''
-                            )
-                        );
-
-                        if ($description === '') {
-                            $description =
-                                venue_card_description(
-                                    $venue
-                                );
-                        }
-
-                        if ($description === '') {
-                            $description =
-                                'Wedding venue available for customer bookings.';
                         }
 
                         $price =
-                            $venuePrice($venue);
+                            $priceOf($venue);
 
                         $capacity =
-                            $venueCapacity($venue);
+                            $capacityOf($venue);
 
                         $facilities =
-                            $venueFacilities(
+                            $facilitiesOf(
                                 $venue['facilities']
                                 ?? ''
                             );
 
-                        $facilityText =
-                            $facilities !== []
-                                ? implode(
-                                    '||',
-                                    $facilities
-                                )
-                                : '';
-
-                        $imageUrls = array_map(
-                            static fn (
-                                array $image
-                            ): string =>
-                                (string) $image['url'],
-
-                            $previewImages
+                        $facilityText = implode(
+                            '||',
+                            $facilities
                         );
+
+                        $imageUrls = array_column(
+                            $previewImages,
+                            'url'
+                        );
+
                         ?>
 
                         <article class="manager-venue-card">
 
-                            <div class="manager-venue-main-image-wrap">
+                            <div
+                                class="manager-venue-main-image-wrap"
+                            >
 
                                 <img
                                     class="manager-venue-main-image"
@@ -719,7 +945,9 @@ $currentYear = date('Y');
                                     alt="<?= e($venueName) ?>"
                                 >
 
-                                <span class="manager-venue-main-badge">
+                                <span
+                                    class="manager-venue-main-badge"
+                                >
                                     <i class="fa-regular fa-image"></i>
                                     Main Photo
                                 </span>
@@ -747,13 +975,11 @@ $currentYear = date('Y');
                                 </div>
 
                                 <strong class="manager-venue-price">
-
                                     <?= e(
-                                        $formatVenuePrice(
+                                        $formatPrice(
                                             $price
                                         )
                                     ) ?>
-
                                 </strong>
 
                                 <p class="manager-venue-description">
@@ -763,8 +989,8 @@ $currentYear = date('Y');
                                 <div class="manager-venue-thumbnails">
 
                                     <?php foreach (
-                                        $previewImages as
-                                        $index => $previewImage
+                                        $previewImages
+                                        as $index => $image
                                     ): ?>
 
                                         <button
@@ -776,29 +1002,33 @@ $currentYear = date('Y');
                                                 (string) $venueId
                                             ) ?>"
                                             data-venue-image="<?= e(
-                                                (string) $previewImage['url']
+                                                (string) $image['url']
                                             ) ?>"
-                                            data-venue-is-main="<?= $previewImage['is_main']
+                                            data-venue-is-main="<?= $image['is_main']
                                                 ? 'true'
                                                 : 'false' ?>"
-                                            aria-label="<?= $previewImage['is_main']
+                                            aria-label="<?= $image['is_main']
                                                 ? 'Show original main venue photo'
                                                 : 'Show venue gallery photo '
-                                                    . e((string) $index) ?>"
+                                                    . e(
+                                                        (string) $index
+                                                    ) ?>"
                                         >
 
                                             <img
                                                 src="<?= e(
-                                                    (string) $previewImage['url']
+                                                    (string) $image['url']
                                                 ) ?>"
-                                                alt="<?= $previewImage['is_main']
+                                                alt="<?= $image['is_main']
                                                     ? 'Original main venue photo'
                                                     : 'Venue gallery photo '
-                                                        . e((string) $index) ?>"
+                                                        . e(
+                                                            (string) $index
+                                                        ) ?>"
                                             >
 
                                             <?php if (
-                                                $previewImage['is_main']
+                                                $image['is_main']
                                             ): ?>
 
                                                 <span>
@@ -816,6 +1046,7 @@ $currentYear = date('Y');
                                 <ul class="manager-venue-details">
 
                                     <li>
+
                                         <i class="fa-solid fa-users"></i>
 
                                         Capacity:
@@ -825,6 +1056,7 @@ $currentYear = date('Y');
                                             )
                                         ) ?>
                                         guests
+
                                     </li>
 
                                     <?php if (
@@ -840,8 +1072,11 @@ $currentYear = date('Y');
                                         ): ?>
 
                                             <li>
+
                                                 <i class="fa-solid fa-check"></i>
+
                                                 <?= e($facility) ?>
+
                                             </li>
 
                                         <?php endforeach; ?>
@@ -849,8 +1084,11 @@ $currentYear = date('Y');
                                     <?php else: ?>
 
                                         <li>
+
                                             <i class="fa-solid fa-check"></i>
+
                                             Wedding facilities available
+
                                         </li>
 
                                     <?php endif; ?>
@@ -873,7 +1111,7 @@ $currentYear = date('Y');
                                             $location
                                         ) ?>"
                                         data-price="<?= e(
-                                            $formatVenuePrice(
+                                            $formatPrice(
                                                 $price
                                             )
                                         ) ?>"
@@ -926,9 +1164,14 @@ $currentYear = date('Y');
         </section>
 
         <footer class="manager-view-footer">
-            © <?= e((string) $currentYear) ?>
+
+            © <?= e(
+                (string) $currentYear
+            ) ?>
+
             Wedding Event Planner.
             All rights reserved.
+
         </footer>
 
     </main>
@@ -954,7 +1197,9 @@ $currentYear = date('Y');
 
                 <div>
 
-                    <div class="manager-venue-modal-image-wrap">
+                    <div
+                        class="manager-venue-modal-image-wrap"
+                    >
 
                         <img
                             id="managerVenueModalMainImage"
@@ -971,7 +1216,9 @@ $currentYear = date('Y');
 
                     </div>
 
-                    <div id="managerVenueModalThumbnails"></div>
+                    <div
+                        id="managerVenueModalThumbnails"
+                    ></div>
 
                 </div>
 
@@ -979,27 +1226,41 @@ $currentYear = date('Y');
 
                     <h2 id="managerVenueModalName"></h2>
 
-                    <div id="managerVenueModalPrice"></div>
+                    <div
+                        id="managerVenueModalPrice"
+                    ></div>
 
-                    <p id="managerVenueModalDescription"></p>
+                    <p
+                        id="managerVenueModalDescription"
+                    ></p>
 
-                    <div class="manager-venue-information-row">
+                    <div
+                        class="manager-venue-information-row"
+                    >
 
                         <strong>Location:</strong>
 
-                        <span id="managerVenueModalLocation"></span>
+                        <span
+                            id="managerVenueModalLocation"
+                        ></span>
 
                     </div>
 
-                    <div class="manager-venue-information-row">
+                    <div
+                        class="manager-venue-information-row"
+                    >
 
                         <strong>Capacity:</strong>
 
-                        <span id="managerVenueModalCapacity"></span>
+                        <span
+                            id="managerVenueModalCapacity"
+                        ></span>
 
                     </div>
 
-                    <div class="manager-venue-information-row">
+                    <div
+                        class="manager-venue-information-row"
+                    >
 
                         <strong>Availability:</strong>
 
@@ -1009,11 +1270,15 @@ $currentYear = date('Y');
 
                     </div>
 
-                    <div class="manager-venue-facilities-box">
+                    <div
+                        class="manager-venue-facilities-box"
+                    >
 
                         <h3>Venue Facilities</h3>
 
-                        <ul id="managerVenueModalFacilities"></ul>
+                        <ul
+                            id="managerVenueModalFacilities"
+                        ></ul>
 
                     </div>
 
@@ -1035,94 +1300,111 @@ $currentYear = date('Y');
     <script>
         "use strict";
 
-        const bookingSidebar = document.getElementById(
-            "bookingSidebar"
-        );
+        const sidebar =
+            document.getElementById(
+                "bookingSidebar"
+            );
 
-        const bookingSidebarOverlay = document.getElementById(
-            "bookingSidebarOverlay"
-        );
+        const sidebarOverlay =
+            document.getElementById(
+                "bookingSidebarOverlay"
+            );
 
-        const bookingMenuButton = document.getElementById(
-            "bookingMenuButton"
-        );
+        const menuButton =
+            document.getElementById(
+                "bookingMenuButton"
+            );
 
-        function closeBookingSidebar() {
-            bookingSidebar?.classList.remove("open");
+        function closeSidebar() {
+            sidebar?.classList.remove(
+                "open"
+            );
 
-            bookingSidebarOverlay?.classList.remove(
+            sidebarOverlay?.classList.remove(
                 "open"
             );
         }
 
-        bookingMenuButton?.addEventListener(
+        menuButton?.addEventListener(
             "click",
             function () {
-                bookingSidebar?.classList.toggle(
+                sidebar?.classList.toggle(
                     "open"
                 );
 
-                bookingSidebarOverlay?.classList.toggle(
+                sidebarOverlay?.classList.toggle(
                     "open"
                 );
             }
         );
 
-        bookingSidebarOverlay?.addEventListener(
+        sidebarOverlay?.addEventListener(
             "click",
-            closeBookingSidebar
+            closeSidebar
         );
 
         document.addEventListener(
             "click",
             function (event) {
-                const thumbnail = event.target.closest(
-                    ".manager-venue-thumbnail"
-                );
+                const thumbnail =
+                    event.target.closest(
+                        ".manager-venue-thumbnail"
+                    );
 
                 if (!thumbnail) {
                     return;
                 }
 
-                const mainImage = document.getElementById(
-                    thumbnail.dataset.venueTarget || ""
-                );
+                const mainImage =
+                    document.getElementById(
+                        thumbnail.dataset
+                            .venueTarget
+                        || ""
+                    );
 
                 if (
                     !mainImage
-                    || !thumbnail.dataset.venueImage
+                    || !thumbnail.dataset
+                        .venueImage
                 ) {
                     return;
                 }
 
                 mainImage.src =
-                    thumbnail.dataset.venueImage;
+                    thumbnail.dataset
+                        .venueImage;
 
-                const card = thumbnail.closest(
-                    ".manager-venue-card"
-                );
+                const card =
+                    thumbnail.closest(
+                        ".manager-venue-card"
+                    );
 
                 card
                     ?.querySelectorAll(
                         ".manager-venue-thumbnail"
                     )
-                    .forEach(function (item) {
-                        item.classList.remove(
-                            "active"
-                        );
-                    });
+                    .forEach(
+                        function (item) {
+                            item.classList.remove(
+                                "active"
+                            );
+                        }
+                    );
 
-                thumbnail.classList.add("active");
-
-                const badge = card?.querySelector(
-                    ".manager-venue-main-badge"
+                thumbnail.classList.add(
+                    "active"
                 );
 
-                badge?.classList.toggle(
-                    "hidden",
-                    thumbnail.dataset.venueIsMain
-                        !== "true"
-                );
+                card
+                    ?.querySelector(
+                        ".manager-venue-main-badge"
+                    )
+                    ?.classList.toggle(
+                        "hidden",
+                        thumbnail.dataset
+                            .venueIsMain
+                            !== "true"
+                    );
             }
         );
 
@@ -1186,11 +1468,17 @@ $currentYear = date('Y');
                 "managerVenueModalBook"
             );
 
-        function renderVenueModalImages(images) {
-            venueModalThumbnails.innerHTML = "";
+        function renderVenueModalImages(
+            images
+        ) {
+            venueModalThumbnails.innerHTML =
+                "";
 
             images.forEach(
-                function (imageUrl, index) {
+                function (
+                    imageUrl,
+                    index
+                ) {
                     const button =
                         document.createElement(
                             "button"
@@ -1201,7 +1489,8 @@ $currentYear = date('Y');
                             "img"
                         );
 
-                    button.type = "button";
+                    button.type =
+                        "button";
 
                     button.className =
                         "manager-venue-modal-thumbnail";
@@ -1212,14 +1501,18 @@ $currentYear = date('Y');
                         );
                     }
 
-                    image.src = imageUrl;
+                    image.src =
+                        imageUrl;
 
-                    image.alt = index === 0
-                        ? "Original main venue photo"
-                        : "Venue gallery photo "
-                            + index;
+                    image.alt =
+                        index === 0
+                            ? "Original main venue photo"
+                            : "Venue gallery photo "
+                                + index;
 
-                    button.appendChild(image);
+                    button.appendChild(
+                        image
+                    );
 
                     if (index === 0) {
                         const label =
@@ -1246,7 +1539,9 @@ $currentYear = date('Y');
                                     ".manager-venue-modal-thumbnail"
                                 )
                                 .forEach(
-                                    function (item) {
+                                    function (
+                                        item
+                                    ) {
                                         item.classList.remove(
                                             "active"
                                         );
@@ -1257,16 +1552,18 @@ $currentYear = date('Y');
                                 "active"
                             );
 
-                            venueModalMainBadge.classList.toggle(
-                                "hidden",
-                                index !== 0
-                            );
+                            venueModalMainBadge
+                                .classList.toggle(
+                                    "hidden",
+                                    index !== 0
+                                );
                         }
                     );
 
-                    venueModalThumbnails.appendChild(
-                        button
-                    );
+                    venueModalThumbnails
+                        .appendChild(
+                            button
+                        );
                 }
             );
         }
@@ -1275,141 +1572,171 @@ $currentYear = date('Y');
             .querySelectorAll(
                 "[data-venue-details]"
             )
-            .forEach(function (button) {
-                button.addEventListener(
-                    "click",
-                    function () {
-                        let images = [];
+            .forEach(
+                function (button) {
+                    button.addEventListener(
+                        "click",
+                        function () {
+                            let images = [];
 
-                        try {
-                            images = JSON.parse(
-                                button.dataset.images
-                                || "[]"
-                            );
-                        } catch (error) {
-                            images = [];
-                        }
+                            try {
+                                images = JSON.parse(
+                                    button.dataset
+                                        .images
+                                    || "[]"
+                                );
+                            } catch (error) {
+                                images = [];
+                            }
 
-                        venueModalName.textContent =
-                            button.dataset.name
-                            || "Venue";
+                            venueModalName
+                                .textContent =
+                                button.dataset.name
+                                || "Venue";
 
-                        venueModalPrice.textContent =
-                            button.dataset.price
-                            || "";
+                            venueModalPrice
+                                .textContent =
+                                button.dataset.price
+                                || "";
 
-                        venueModalDescription.textContent =
-                            button.dataset.description
-                            || "";
+                            venueModalDescription
+                                .textContent =
+                                button.dataset
+                                    .description
+                                || "";
 
-                        venueModalLocation.textContent =
-                            button.dataset.location
-                            || "Not specified";
+                            venueModalLocation
+                                .textContent =
+                                button.dataset
+                                    .location
+                                || "Not specified";
 
-                        venueModalCapacity.textContent =
-                            (
-                                button.dataset.capacity
-                                || "0"
-                            )
-                            + " guests";
-
-                        venueModalBook.href =
-                            "<?= e(
-                                url(
-                                    '/booking_manager/booking.php?venue_id='
+                            venueModalCapacity
+                                .textContent =
+                                (
+                                    button.dataset
+                                        .capacity
+                                    || "0"
                                 )
-                            ) ?>"
-                            + (
-                                button.dataset.id
-                                || ""
-                            );
+                                + " guests";
 
-                        venueModalFacilities.innerHTML =
-                            "";
-
-                        const facilities =
-                            button.dataset.facilities
-                                ? button.dataset.facilities.split(
-                                    "||"
-                                )
-                                : [];
-
-                        if (facilities.length === 0) {
-                            const item =
-                                document.createElement(
-                                    "li"
+                            venueModalBook.href =
+                                "<?= e(
+                                    url(
+                                        '/booking_manager/booking.php?venue_id='
+                                    )
+                                ) ?>"
+                                + (
+                                    button.dataset.id
+                                    || ""
                                 );
 
-                            item.textContent =
-                                "No facilities have been listed.";
+                            venueModalFacilities
+                                .innerHTML =
+                                "";
 
-                            venueModalFacilities.appendChild(
-                                item
-                            );
-                        } else {
-                            facilities.forEach(
-                                function (facility) {
-                                    const item =
-                                        document.createElement(
+                            const facilities =
+                                button.dataset
+                                    .facilities
+                                    ? button.dataset
+                                        .facilities
+                                        .split(
+                                            "||"
+                                        )
+                                    : [];
+
+                            if (
+                                facilities.length
+                                === 0
+                            ) {
+                                const item =
+                                    document
+                                        .createElement(
                                             "li"
                                         );
 
-                                    const icon =
-                                        document.createElement(
-                                            "i"
-                                        );
+                                item.textContent =
+                                    "No facilities have been listed.";
 
-                                    const text =
-                                        document.createElement(
-                                            "span"
-                                        );
-
-                                    icon.className =
-                                        "fa-solid fa-check";
-
-                                    text.textContent =
-                                        facility;
-
-                                    item.append(
-                                        icon,
-                                        text
-                                    );
-
-                                    venueModalFacilities.appendChild(
+                                venueModalFacilities
+                                    .appendChild(
                                         item
                                     );
-                                }
+                            } else {
+                                facilities.forEach(
+                                    function (
+                                        facility
+                                    ) {
+                                        const item =
+                                            document
+                                                .createElement(
+                                                    "li"
+                                                );
+
+                                        const icon =
+                                            document
+                                                .createElement(
+                                                    "i"
+                                                );
+
+                                        const text =
+                                            document
+                                                .createElement(
+                                                    "span"
+                                                );
+
+                                        icon.className =
+                                            "fa-solid fa-check";
+
+                                        text.textContent =
+                                            facility;
+
+                                        item.append(
+                                            icon,
+                                            text
+                                        );
+
+                                        venueModalFacilities
+                                            .appendChild(
+                                                item
+                                            );
+                                    }
+                                );
+                            }
+
+                            if (
+                                images.length > 0
+                            ) {
+                                venueModalMainImage.src =
+                                    images[0];
+
+                                venueModalMainBadge
+                                    .classList.remove(
+                                        "hidden"
+                                    );
+
+                                renderVenueModalImages(
+                                    images
+                                );
+                            }
+
+                            venueModal.classList.add(
+                                "open"
                             );
+
+                            venueModal.setAttribute(
+                                "aria-hidden",
+                                "false"
+                            );
+
+                            document.body
+                                .classList.add(
+                                    "manager-venue-modal-open"
+                                );
                         }
-
-                        if (images.length > 0) {
-                            venueModalMainImage.src =
-                                images[0];
-
-                            venueModalMainBadge.classList.remove(
-                                "hidden"
-                            );
-
-                            renderVenueModalImages(
-                                images
-                            );
-                        }
-
-                        venueModal.classList.add(
-                            "open"
-                        );
-
-                        venueModal.setAttribute(
-                            "aria-hidden",
-                            "false"
-                        );
-
-                        document.body.classList.add(
-                            "manager-venue-modal-open"
-                        );
-                    }
-                );
-            });
+                    );
+                }
+            );
 
         function closeVenueModal() {
             venueModal.classList.remove(
@@ -1421,29 +1748,38 @@ $currentYear = date('Y');
                 "true"
             );
 
-            document.body.classList.remove(
-                "manager-venue-modal-open"
-            );
+            document.body
+                .classList.remove(
+                    "manager-venue-modal-open"
+                );
         }
 
-        venueModalClose?.addEventListener(
-            "click",
-            closeVenueModal
-        );
+        venueModalClose
+            ?.addEventListener(
+                "click",
+                closeVenueModal
+            );
 
-        venueModal?.addEventListener(
-            "click",
-            function (event) {
-                if (event.target === venueModal) {
-                    closeVenueModal();
+        venueModal
+            ?.addEventListener(
+                "click",
+                function (event) {
+                    if (
+                        event.target
+                        === venueModal
+                    ) {
+                        closeVenueModal();
+                    }
                 }
-            }
-        );
+            );
 
         document.addEventListener(
             "keydown",
             function (event) {
-                if (event.key === "Escape") {
+                if (
+                    event.key
+                    === "Escape"
+                ) {
                     closeVenueModal();
                 }
             }

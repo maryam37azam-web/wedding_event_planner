@@ -193,13 +193,47 @@ function format_venue_price(float $price): string
 }
 
 /**
- * Return the complete venue description for management cards.
+ * Return the current Admin venue-card page type.
+ */
+function admin_venue_card_page_type(): string
+{
+    $scriptName = str_replace(
+        '\\',
+        '/',
+        (string) ($_SERVER['SCRIPT_NAME'] ?? '')
+    );
+
+    if (str_ends_with($scriptName, '/admin/venues.php')) {
+        return 'manage';
+    }
+
+    if (str_ends_with($scriptName, '/admin/all_venues.php')) {
+        return 'all';
+    }
+
+    return '';
+}
+
+/**
+ * Return the complete venue description for each page.
  */
 function venue_card_description(array $venue): string
 {
     $description = trim((string) ($venue['description'] ?? ''));
 
-    return $description !== ''
-        ? $description
-        : 'No venue description has been added yet.';
+    if ($description === '') {
+        $description = 'No venue description has been added yet.';
+    }
+
+    $pageType = admin_venue_card_page_type();
+
+    if ($pageType === '') {
+        return $description;
+    }
+
+    $price = format_venue_price(
+        (float) ($venue['price'] ?? 0)
+    );
+
+    return $price . "\n" . $description;
 }

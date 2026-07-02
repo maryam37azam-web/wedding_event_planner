@@ -506,22 +506,20 @@ body.all-packages-page {
 }
 
 .all-package-description {
-    min-height: 43px !important;
-    margin: 0 0 9px !important;
+    min-height: 72px !important;
+    margin: 0 0 12px !important;
 
-    display: -webkit-box !important;
+    display: block !important;
 
     overflow: hidden !important;
 
     color: #716b73 !important;
 
-    font-size: 10px !important;
-    line-height: 1.45 !important;
+    font-size: 14px !important;
+    line-height: 1.7 !important;
 
+    white-space: pre-line !important;
     overflow-wrap: anywhere !important;
-
-    -webkit-box-orient: vertical !important;
-    -webkit-line-clamp: 3 !important;
 }
 
 .all-package-thumbnails {

@@ -215,23 +215,53 @@ function format_package_price(float $price): string
 }
 
 /**
- * Return the package description requested for management cards.
+ * Return the current Admin package-card page type.
+ */
+function admin_package_card_page_type(): string
+{
+    $scriptName = str_replace(
+        '\\',
+        '/',
+        (string) ($_SERVER['SCRIPT_NAME'] ?? '')
+    );
+
+    if (str_ends_with($scriptName, '/admin/packages.php')) {
+        return 'manage';
+    }
+
+    if (str_ends_with($scriptName, '/admin/all_packages.php')) {
+        return 'all';
+    }
+
+    return '';
+}
+
+/**
+ * Return the package description requested for each page.
  */
 function package_card_description(array $package): string
 {
-    $description = trim(
-        (string) ($package['description'] ?? '')
-    );
+    $description = trim((string) ($package['description'] ?? ''));
 
-    if ($description !== '') {
+    if ($description === '') {
+        $shortDescription = trim(
+            (string) ($package['short_description'] ?? '')
+        );
+
+        $description = $shortDescription !== ''
+            ? $shortDescription
+            : 'No package description has been added yet.';
+    }
+
+    $pageType = admin_package_card_page_type();
+
+    if ($pageType === '') {
         return $description;
     }
 
-    $shortDescription = trim(
-        (string) ($package['short_description'] ?? '')
+    $price = format_package_price(
+        (float) ($package['price'] ?? 0)
     );
 
-    return $shortDescription !== ''
-        ? $shortDescription
-        : 'No package description has been added yet.';
+    return $price . "\n" . $description;
 }

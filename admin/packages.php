@@ -51,6 +51,8 @@ $isPackageFormPost = false;
 
 $formValues = [
     'name' => '',
+    'venue_name' => '',
+    'venue_location' => '',
     'short_description' => '',
     'description' => '',
     'price' => '',
@@ -427,6 +429,20 @@ if (is_post()) {
             (string) ($_POST['name'] ?? '')
         );
 
+        $venueName = trim(
+            (string) (
+                $_POST['venue_name']
+                ?? ''
+            )
+        );
+
+        $venueLocation = trim(
+            (string) (
+                $_POST['venue_location']
+                ?? ''
+            )
+        );
+
         $shortDescription = trim(
             (string) (
                 $_POST['short_description']
@@ -502,6 +518,8 @@ if (is_post()) {
 
         $formValues = [
             'name' => $name,
+            'venue_name' => $venueName,
+            'venue_location' => $venueLocation,
             'short_description' =>
                 $shortDescription,
             'description' => $description,
@@ -530,6 +548,22 @@ if (is_post()) {
         ) {
             $errors[] =
                 'Package name must contain between 3 and 150 characters.';
+        }
+
+        if (
+            mb_strlen($venueName) < 3
+            || mb_strlen($venueName) > 150
+        ) {
+            $errors[] =
+                'Venue name must contain between 3 and 150 characters.';
+        }
+
+        if (
+            mb_strlen($venueLocation) < 3
+            || mb_strlen($venueLocation) > 255
+        ) {
+            $errors[] =
+                'Venue location must contain between 3 and 255 characters.';
         }
 
         if (
@@ -687,10 +721,6 @@ if (is_post()) {
                     }
                 }
 
-                /*
-                 * The new design uses only
-                 * three gallery images.
-                 */
                 if (
                     $action === 'update'
                     && !empty(
@@ -737,6 +767,8 @@ if (is_post()) {
                         $connection->prepare(
                             'INSERT INTO packages (
                                 name,
+                                venue_name,
+                                venue_location,
                                 short_description,
                                 description,
                                 price,
@@ -756,12 +788,14 @@ if (is_post()) {
                              ) VALUES (
                                 ?, ?, ?, ?, ?, ?, ?,
                                 ?, ?, ?, ?, ?, ?, ?,
-                                ?, ?, ?
+                                ?, ?, ?, ?, ?
                              )'
                         );
 
                     $saveStatement->execute([
                         $name,
+                        $venueName,
+                        $venueLocation,
                         $shortDescription,
                         $description,
                         (float) $priceClean,
@@ -794,6 +828,8 @@ if (is_post()) {
                         $connection->prepare(
                             'UPDATE packages
                              SET name = ?,
+                                 venue_name = ?,
+                                 venue_location = ?,
                                  short_description = ?,
                                  description = ?,
                                  price = ?,
@@ -814,6 +850,8 @@ if (is_post()) {
 
                     $saveStatement->execute([
                         $name,
+                        $venueName,
+                        $venueLocation,
                         $shortDescription,
                         $description,
                         (float) $priceClean,
@@ -933,6 +971,20 @@ if (
     $formValues = [
         'name' =>
             (string) $editingPackage['name'],
+        'venue_name' =>
+            (string) (
+                $editingPackage[
+                    'venue_name'
+                ]
+                ?? ''
+            ),
+        'venue_location' =>
+            (string) (
+                $editingPackage[
+                    'venue_location'
+                ]
+                ?? ''
+            ),
         'short_description' =>
             (string) (
                 $editingPackage[
@@ -1923,6 +1975,50 @@ $currentYear = date('Y');
                                 $formValues['price']
                             ) ?>"
                             placeholder="Example: 150000"
+                            required
+                        >
+
+                    </div>
+
+                    <div class="package-input-box">
+
+                        <label for="venue_name">
+                            Venue Name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="venue_name"
+                            name="venue_name"
+                            value="<?= e(
+                                $formValues[
+                                    'venue_name'
+                                ]
+                            ) ?>"
+                            maxlength="150"
+                            placeholder="Enter venue name"
+                            required
+                        >
+
+                    </div>
+
+                    <div class="package-input-box">
+
+                        <label for="venue_location">
+                            Venue Location
+                        </label>
+
+                        <input
+                            type="text"
+                            id="venue_location"
+                            name="venue_location"
+                            value="<?= e(
+                                $formValues[
+                                    'venue_location'
+                                ]
+                            ) ?>"
+                            maxlength="255"
+                            placeholder="Enter venue location"
                             required
                         >
 

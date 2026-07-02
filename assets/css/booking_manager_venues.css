@@ -1,5 +1,193 @@
 /*
 |--------------------------------------------------------------------------
+| Booking Manager venue summary cards
+|--------------------------------------------------------------------------
+| These measurements intentionally match the Admin Manage Venues summary
+| cards from admin_dashboard.css.
+*/
+
+.manager-view-summary.manager-venue-summary {
+    width: 100%;
+    margin-bottom: 20px;
+
+    display: grid;
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.manager-view-summary-card.manager-venue-summary-card {
+    width: 100%;
+    min-width: 0;
+    min-height: 120px;
+    padding: 18px;
+
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    overflow: visible;
+
+    border: 2px solid transparent;
+    border-radius: 18px;
+
+    background: #ffffff;
+    color: inherit;
+
+    box-shadow:
+        0 3px 14px
+        rgba(62, 26, 44, 0.07);
+
+    text-decoration: none;
+
+    transition:
+        transform 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.manager-view-summary-card.manager-venue-summary-card:hover {
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 9px 24px
+        rgba(72, 22, 45, 0.10);
+}
+
+.manager-view-summary-card.manager-venue-summary-card.selected {
+    border-color:
+        rgba(170, 0, 82, 0.24);
+}
+
+.manager-view-summary-icon.manager-venue-summary-icon {
+    width: 58px;
+    height: 58px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 58px;
+
+    border-radius: 50%;
+
+    font-size: 23px;
+}
+
+.manager-venue-summary-total
+.manager-venue-summary-icon {
+    background: #ffe5ef;
+    color: #ff3d7f;
+}
+
+.manager-venue-summary-active
+.manager-venue-summary-icon {
+    background: #f2e7ff;
+    color: #a855f7;
+}
+
+.manager-venue-summary-inactive
+.manager-venue-summary-icon {
+    background: #fff2df;
+    color: #f59e0b;
+}
+
+.manager-venue-summary-popular
+.manager-venue-summary-icon {
+    background: #e8efff;
+    color: #3b82f6;
+}
+
+.manager-venue-summary-content {
+    min-width: 0;
+    flex: 1;
+}
+
+.manager-venue-summary
+.manager-venue-summary-card h4 {
+    margin: 0 0 5px;
+
+    overflow: visible;
+
+    color: #706970;
+
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.25;
+
+    text-overflow: clip;
+    white-space: nowrap;
+}
+
+.manager-venue-summary
+.manager-venue-summary-card h2 {
+    max-width: 100%;
+    margin: 0 0 5px;
+
+    overflow: visible;
+
+    color: #161316;
+
+    font-size: 27px;
+    font-weight: 700;
+    line-height: 1.15;
+
+    text-overflow: clip;
+    white-space: nowrap;
+}
+
+.manager-venue-summary
+.manager-venue-summary-card p {
+    max-width: 100%;
+    margin: 0;
+
+    overflow: visible;
+
+    color: #a4004d;
+
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
+
+    text-overflow: clip;
+    white-space: nowrap;
+}
+
+.manager-venue-summary-popular
+.manager-venue-summary-content {
+    min-width: 0;
+}
+
+.manager-venue-summary
+.manager-venue-summary-popular h2 {
+    max-width: 150px;
+
+    overflow: hidden;
+
+    font-size: 17px;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 1150px) {
+    .manager-view-summary.manager-venue-summary {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .manager-view-summary.manager-venue-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .manager-view-summary-card.manager-venue-summary-card {
+        min-height: 105px;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
 | Booking Manager compact venue cards
 |--------------------------------------------------------------------------
 */
@@ -68,7 +256,7 @@
 
 /*
 |--------------------------------------------------------------------------
-| Compact cards
+| Compact venue cards
 |--------------------------------------------------------------------------
 */
 
@@ -423,7 +611,7 @@
 
 /*
 |--------------------------------------------------------------------------
-| Details modal
+| Venue details modal
 |--------------------------------------------------------------------------
 */
 
@@ -658,7 +846,7 @@ body.manager-venue-modal-open {
 
 /*
 |--------------------------------------------------------------------------
-| Responsive
+| Responsive layout
 |--------------------------------------------------------------------------
 */
 

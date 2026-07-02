@@ -504,21 +504,19 @@ body.all-venues-page {
 }
 
 .all-venue-description {
-    min-height: 43px;
-    margin: 0 0 9px;
+    min-height: 72px;
+    margin: 0 0 12px;
 
-    display: -webkit-box;
+    display: block;
     overflow: hidden;
 
     color: #716b73;
 
-    font-size: 10px;
-    line-height: 1.45;
+    font-size: 14px;
+    line-height: 1.7;
 
+    white-space: pre-line;
     overflow-wrap: anywhere;
-
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
 }
 
 .all-venue-thumbnails {

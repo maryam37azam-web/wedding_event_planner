@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includes/package_helpers.php';
 require_role('booking_manager');
 
 $connection = db();
-$bookingManagerId = (int) $_SESSION['user_id'];
+$bookingManagerId = (int) ($_SESSION['user_id'] ?? 0);
 
 $managerStatement = $connection->prepare(
     'SELECT full_name, email, profile_image, about
@@ -30,10 +30,18 @@ if (!$manager) {
 }
 
 $managerImage = !empty($manager['profile_image'])
-    ? url('/' . ltrim((string) $manager['profile_image'], '/'))
+    ? url(
+        '/'
+        . ltrim(
+            (string) $manager['profile_image'],
+            '/'
+        )
+    )
     : url('/assets/icons/icon-192.png');
 
-$managerAbout = trim((string) ($manager['about'] ?? ''));
+$managerAbout = trim(
+    (string) ($manager['about'] ?? '')
+);
 
 if ($managerAbout === '') {
     $managerAbout = 'Booking Manager';
@@ -50,7 +58,16 @@ $notificationStatement->execute([
     $bookingManagerId,
 ]);
 
-$unreadNotifications = (int) $notificationStatement->fetchColumn();
+$unreadNotifications = (int) (
+    $notificationStatement->fetchColumn()
+);
+
+$totalPackages = (int) $connection
+    ->query(
+        'SELECT COUNT(*)
+         FROM packages'
+    )
+    ->fetchColumn();
 
 $activePackages = (int) $connection
     ->query(
@@ -60,21 +77,53 @@ $activePackages = (int) $connection
     )
     ->fetchColumn();
 
-$minimumPackagePrice = (float) $connection
+$inactivePackages = (int) $connection
     ->query(
-        "SELECT COALESCE(MIN(price), 0)
+        "SELECT COUNT(*)
          FROM packages
-         WHERE status = 'active'"
+         WHERE status = 'inactive'"
     )
     ->fetchColumn();
 
-$maximumGuestCapacity = (int) $connection
+$popularPackage = $connection
     ->query(
-        "SELECT COALESCE(MAX(guest_capacity), 0)
-         FROM packages
-         WHERE status = 'active'"
+        'SELECT
+            p.id,
+            p.name,
+            (
+                SELECT COUNT(*)
+                FROM bookings b
+                WHERE b.package_id = p.id
+            ) AS booking_total
+         FROM packages p
+         ORDER BY
+            booking_total DESC,
+            p.created_at DESC,
+            p.id DESC
+         LIMIT 1'
     )
-    ->fetchColumn();
+    ->fetch();
+
+$popularPackageBookings = (int) (
+    $popularPackage['booking_total']
+    ?? 0
+);
+
+$popularPackageName = 'No booking yet';
+
+if ($popularPackageBookings > 0) {
+    $popularPackageName = trim(
+        (string) (
+            $popularPackage['name']
+            ?? ''
+        )
+    );
+
+    if ($popularPackageName === '') {
+        $popularPackageName =
+            'Popular package';
+    }
+}
 
 $packages = $connection
     ->query(
@@ -86,10 +135,61 @@ $packages = $connection
     )
     ->fetchAll();
 
+$sidebarLinks = [
+    [
+        '/booking_manager/dashboard.php',
+        'fa-gauge',
+        'Dashboard',
+    ],
+    [
+        '/booking_manager/bookings.php',
+        'fa-calendar-check',
+        'Manage Bookings',
+    ],
+    [
+        '/booking_manager/booking.php',
+        'fa-calendar-plus',
+        'Create Booking',
+    ],
+    [
+        '/booking_manager/services.php',
+        'fa-bell-concierge',
+        'View Services',
+    ],
+    [
+        '/booking_manager/gallery.php',
+        'fa-images',
+        'View Gallery',
+    ],
+    [
+        '/booking_manager/packages.php',
+        'fa-gift',
+        'View Packages',
+        true,
+    ],
+    [
+        '/booking_manager/venues.php',
+        'fa-hotel',
+        'View Venues',
+    ],
+    [
+        '/booking_manager/profile.php',
+        'fa-user',
+        'Manage Profile',
+    ],
+    [
+        '/booking_manager/notifications.php',
+        'fa-bell',
+        'View Notifications',
+    ],
+];
+
 $currentYear = date('Y');
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
 
@@ -102,7 +202,10 @@ $currentYear = date('Y');
         View Packages | <?= e(APP_NAME) ?>
     </title>
 
-    <?php require __DIR__ . '/../includes/pwa_head.php'; ?>
+    <?php
+    require __DIR__
+        . '/../includes/pwa_head.php';
+    ?>
 
     <link
         rel="stylesheet"
@@ -111,21 +214,46 @@ $currentYear = date('Y');
 
     <link
         rel="stylesheet"
-        href="<?= e(url('/assets/css/booking_manager_dashboard.css')) ?>"
+        href="<?= e(
+            url(
+                '/assets/css/booking_manager_dashboard.css'
+            )
+        ) ?>"
     >
 
     <link
         rel="stylesheet"
-        href="<?= e(url('/assets/css/booking_manager_views.css')) ?>"
+        href="<?= e(
+            url(
+                '/assets/css/booking_manager_views.css'
+            )
+        ) ?>"
     >
 
     <link
         rel="stylesheet"
-        href="<?= e(url('/assets/css/booking_manager_packages.css')) ?>"
+        href="<?= e(
+            url(
+                '/assets/css/package_management.css'
+                . '?v=20260702-2'
+            )
+        ) ?>"
+    >
+
+    <link
+        rel="stylesheet"
+        href="<?= e(
+            url(
+                '/assets/css/booking_manager_packages.css'
+                . '?v=20260702-6'
+            )
+        ) ?>"
     >
 </head>
 
-<body class="booking-manager-page">
+<body
+    class="booking-manager-page booking-manager-packages-page"
+>
 
     <aside
         class="booking-sidebar"
@@ -145,10 +273,14 @@ $currentYear = date('Y');
             >
 
             <h2>
-                <?= e((string) $manager['full_name']) ?>
+                <?= e(
+                    (string) $manager['full_name']
+                ) ?>
             </h2>
 
-            <p><?= e($managerAbout) ?></p>
+            <p>
+                <?= e($managerAbout) ?>
+            </p>
 
             <div class="booking-online">
                 ● Online
@@ -158,59 +290,39 @@ $currentYear = date('Y');
 
         <nav class="booking-menu">
 
-            <a href="<?= e(url('/booking_manager/dashboard.php')) ?>">
-                <i class="fa-solid fa-gauge"></i>
-                Dashboard
-            </a>
+            <?php foreach (
+                $sidebarLinks as $link
+            ): ?>
 
-            <a href="<?= e(url('/booking_manager/bookings.php')) ?>">
-                <i class="fa-solid fa-calendar-check"></i>
-                Manage Bookings
-            </a>
+                <a
+                    class="<?= !empty($link[3])
+                        ? 'active'
+                        : '' ?>"
+                    href="<?= e(
+                        url($link[0])
+                    ) ?>"
+                >
+                    <i
+                        class="fa-solid <?= e(
+                            $link[1]
+                        ) ?>"
+                    ></i>
 
-            <a href="<?= e(url('/booking_manager/booking.php')) ?>">
-                <i class="fa-solid fa-calendar-plus"></i>
-                Create Booking
-            </a>
+                    <?= e($link[2]) ?>
+                </a>
 
-            <a href="<?= e(url('/booking_manager/services.php')) ?>">
-                <i class="fa-solid fa-bell-concierge"></i>
-                View Services
-            </a>
-
-            <a href="<?= e(url('/booking_manager/gallery.php')) ?>">
-                <i class="fa-solid fa-images"></i>
-                View Gallery
-            </a>
-
-            <a
-                class="active"
-                href="<?= e(url('/booking_manager/packages.php')) ?>"
-            >
-                <i class="fa-solid fa-gift"></i>
-                View Packages
-            </a>
-
-            <a href="<?= e(url('/booking_manager/venues.php')) ?>">
-                <i class="fa-solid fa-hotel"></i>
-                View Venues
-            </a>
-
-            <a href="<?= e(url('/booking_manager/profile.php')) ?>">
-                <i class="fa-solid fa-user"></i>
-                Manage Profile
-            </a>
-
-            <a href="<?= e(url('/booking_manager/notifications.php')) ?>">
-                <i class="fa-solid fa-bell"></i>
-                View Notifications
-            </a>
+            <?php endforeach; ?>
 
             <a
                 class="booking-logout"
-                href="<?= e(url('/auth/logout.php')) ?>"
+                href="<?= e(
+                    url('/auth/logout.php')
+                ) ?>"
             >
-                <i class="fa-solid fa-right-from-bracket"></i>
+                <i
+                    class="fa-solid fa-right-from-bracket"
+                ></i>
+
                 Logout
             </a>
 
@@ -235,7 +347,9 @@ $currentYear = date('Y');
                     type="button"
                     aria-label="Open navigation"
                 >
-                    <i class="fa-solid fa-bars"></i>
+                    <i
+                        class="fa-solid fa-bars"
+                    ></i>
                 </button>
 
                 <div class="booking-heading">
@@ -243,7 +357,8 @@ $currentYear = date('Y');
                     <h1>Wedding Packages</h1>
 
                     <p>
-                        View active packages and create a package booking for a customer.
+                        View active packages and create a
+                        package booking for a customer.
                     </p>
 
                 </div>
@@ -260,12 +375,20 @@ $currentYear = date('Y');
 
                 <a
                     class="booking-notification"
-                    href="<?= e(url('/booking_manager/notifications.php')) ?>"
+                    href="<?= e(
+                        url(
+                            '/booking_manager/notifications.php'
+                        )
+                    ) ?>"
                     aria-label="Open notifications"
                 >
-                    <i class="fa-solid fa-bell"></i>
+                    <i
+                        class="fa-solid fa-bell"
+                    ></i>
 
-                    <?php if ($unreadNotifications > 0): ?>
+                    <?php if (
+                        $unreadNotifications > 0
+                    ): ?>
 
                         <span>
                             <?= e(
@@ -276,10 +399,15 @@ $currentYear = date('Y');
                         </span>
 
                     <?php endif; ?>
-
                 </a>
 
-                <a href="<?= e(url('/booking_manager/profile.php')) ?>">
+                <a
+                    href="<?= e(
+                        url(
+                            '/booking_manager/profile.php'
+                        )
+                    ) ?>"
+                >
                     <img
                         class="booking-profile-image"
                         src="<?= e($managerImage) ?>"
@@ -291,46 +419,172 @@ $currentYear = date('Y');
 
         </header>
 
-        <section class="manager-view-summary">
+        <section
+            class="summary-cards package-summary-cards manager-package-summary"
+            aria-label="Package summary"
+        >
 
-            <article class="manager-view-summary-card">
+            <a
+                class="summary-card package-summary-card manager-package-summary-card total"
+                href="<?= e(
+                    url(
+                        '/booking_manager/all_packages.php'
+                        . '?status=all'
+                    )
+                ) ?>"
+            >
 
-                <div class="manager-view-summary-icon">
-                    <i class="fa-solid fa-gift"></i>
+                <div
+                    class="summary-icon pink manager-package-summary-icon"
+                >
+                    <i
+                        class="fa-solid fa-gift"
+                    ></i>
                 </div>
 
-                <div>
+                <div
+                    class="manager-package-summary-copy"
+                >
+                    <h4>Total Packages</h4>
+
+                    <h2>
+                        <?= e(
+                            number_format(
+                                $totalPackages
+                            )
+                        ) ?>
+                    </h2>
+
+                    <p>Click to show all</p>
+                </div>
+
+            </a>
+
+            <a
+                class="summary-card package-summary-card manager-package-summary-card active"
+                href="<?= e(
+                    url(
+                        '/booking_manager/all_packages.php'
+                        . '?status=active'
+                    )
+                ) ?>"
+            >
+
+                <div
+                    class="summary-icon purple manager-package-summary-icon"
+                >
+                    <i
+                        class="fa-solid fa-circle-check"
+                    ></i>
+                </div>
+
+                <div
+                    class="manager-package-summary-copy"
+                >
                     <h4>Active Packages</h4>
-                    <h2><?= e((string) $activePackages) ?></h2>
+
+                    <h2>
+                        <?= e(
+                            number_format(
+                                $activePackages
+                            )
+                        ) ?>
+                    </h2>
+
+                    <p>Visible on website</p>
                 </div>
 
-            </article>
+            </a>
 
-            <article class="manager-view-summary-card">
+            <a
+                class="summary-card package-summary-card manager-package-summary-card inactive"
+                href="<?= e(
+                    url(
+                        '/booking_manager/all_packages.php'
+                        . '?status=inactive'
+                    )
+                ) ?>"
+            >
 
-                <div class="manager-view-summary-icon">
-                    <i class="fa-solid fa-money-bill-wave"></i>
+                <div
+                    class="summary-icon orange manager-package-summary-icon"
+                >
+                    <i
+                        class="fa-solid fa-circle-pause"
+                    ></i>
                 </div>
 
-                <div>
-                    <h4>Starting Price</h4>
-                    <h2><?= e(format_package_price($minimumPackagePrice)) ?></h2>
+                <div
+                    class="manager-package-summary-copy"
+                >
+                    <h4>Inactive Packages</h4>
+
+                    <h2>
+                        <?= e(
+                            number_format(
+                                $inactivePackages
+                            )
+                        ) ?>
+                    </h2>
+
+                    <p>Hidden from website</p>
                 </div>
 
-            </article>
+            </a>
 
-            <article class="manager-view-summary-card">
+            <a
+                class="summary-card package-summary-card manager-package-summary-card popular"
+                href="<?= e(
+                    url(
+                        '/booking_manager/all_packages.php'
+                        . '?status=all&sort=popular'
+                    )
+                ) ?>"
+            >
 
-                <div class="manager-view-summary-icon">
-                    <i class="fa-solid fa-users"></i>
+                <div
+                    class="summary-icon blue manager-package-summary-icon"
+                >
+                    <i
+                        class="fa-solid fa-star"
+                    ></i>
                 </div>
 
-                <div>
-                    <h4>Maximum Capacity</h4>
-                    <h2><?= e(number_format($maximumGuestCapacity)) ?></h2>
+                <div
+                    class="package-popular-summary manager-package-summary-copy"
+                >
+                    <h4>Popular Package</h4>
+
+                    <h2
+                        title="<?= e(
+                            $popularPackageName
+                        ) ?>"
+                    >
+                        <?= e(
+                            $popularPackageName
+                        ) ?>
+                    </h2>
+
+                    <p>
+                        <?=
+                        $popularPackageBookings > 0
+                            ? e(
+                                number_format(
+                                    $popularPackageBookings
+                                )
+                                . ' booking'
+                                . (
+                                    $popularPackageBookings === 1
+                                        ? ''
+                                        : 's'
+                                )
+                            )
+                            : 'Based on bookings'
+                        ?>
+                    </p>
                 </div>
 
-            </article>
+            </a>
 
         </section>
 
@@ -339,18 +593,28 @@ $currentYear = date('Y');
             <div class="manager-package-heading">
 
                 <div>
-                    <h2>Available Wedding Packages</h2>
+                    <h2>
+                        Available Wedding Packages
+                    </h2>
 
                     <p>
-                        View package images, facilities, music options and current pricing.
+                        View package images, facilities,
+                        music options and current pricing.
                     </p>
                 </div>
 
                 <a
                     class="manager-package-view-all"
-                    href="<?= e(url('/booking_manager/all_packages.php')) ?>"
+                    href="<?= e(
+                        url(
+                            '/booking_manager/all_packages.php'
+                        )
+                    ) ?>"
                 >
-                    <i class="fa-solid fa-table-cells-large"></i>
+                    <i
+                        class="fa-solid fa-table-cells-large"
+                    ></i>
+
                     View All Packages
                 </a>
 
@@ -360,12 +624,17 @@ $currentYear = date('Y');
 
                 <div class="manager-package-empty">
 
-                    <i class="fa-solid fa-gift"></i>
+                    <i
+                        class="fa-solid fa-gift"
+                    ></i>
 
-                    <h3>No active packages found</h3>
+                    <h3>
+                        No active packages found
+                    </h3>
 
                     <p>
-                        Packages activated by the Admin will appear here automatically.
+                        Packages activated by the Admin
+                        will appear here automatically.
                     </p>
 
                 </div>
@@ -374,168 +643,320 @@ $currentYear = date('Y');
 
                 <div class="manager-package-grid">
 
-                    <?php foreach ($packages as $package): ?>
-                        <?php
-                        $packageId = (int) $package['id'];
+                    <?php foreach (
+                        $packages as $package
+                    ): ?>
 
-                        $features = package_feature_lines(
-                            $package['features'] ?? null
+                        <?php
+
+                        $packageId = (int) (
+                            $package['id']
                         );
+
+                        $features =
+                            package_feature_lines(
+                                $package['features']
+                                ?? null
+                            );
 
                         $musicOptions = [];
 
-                        if ((int) ($package['basic_music'] ?? 0) === 1) {
-                            $musicOptions[] = 'Basic Music';
+                        if (
+                            (int) (
+                                $package['basic_music']
+                                ?? 0
+                            ) === 1
+                        ) {
+                            $musicOptions[] =
+                                'Basic Music';
                         }
 
-                        if ((int) ($package['live_music'] ?? 0) === 1) {
-                            $musicOptions[] = 'Live Music';
+                        if (
+                            (int) (
+                                $package['live_music']
+                                ?? 0
+                            ) === 1
+                        ) {
+                            $musicOptions[] =
+                                'Live Music';
                         }
 
-                        $musicText = $musicOptions !== []
-                            ? implode(' and ', $musicOptions)
-                            : 'No music selected';
+                        $musicText =
+                            $musicOptions !== []
+                                ? implode(
+                                    ' and ',
+                                    $musicOptions
+                                )
+                                : 'No music selected';
 
-                        $mainImage = package_image_url(
-                            $package['main_image'] ?? null
-                        );
+                        $mainImage =
+                            package_image_url(
+                                $package['main_image']
+                                ?? null
+                            );
 
                         $previewImages = [
                             [
-                                'url' => $mainImage,
-                                'is_main' => true,
+                                'url' =>
+                                    $mainImage,
+                                'is_main' =>
+                                    true,
                             ],
                         ];
 
                         foreach (
-                            ['image_one', 'image_two', 'image_three']
-                            as $imageColumn
+                            [
+                                'image_one',
+                                'image_two',
+                                'image_three',
+                            ] as $imageColumn
                         ) {
                             $imagePath = trim(
-                                (string) ($package[$imageColumn] ?? '')
+                                (string) (
+                                    $package[
+                                        $imageColumn
+                                    ]
+                                    ?? ''
+                                )
                             );
 
-                            if ($imagePath === '') {
-                                continue;
+                            if (
+                                $imagePath !== ''
+                            ) {
+                                $previewImages[] = [
+                                    'url' =>
+                                        package_image_url(
+                                            $imagePath
+                                        ),
+                                    'is_main' =>
+                                        false,
+                                ];
                             }
-
-                            $previewImages[] = [
-                                'url' => package_image_url($imagePath),
-                                'is_main' => false,
-                            ];
                         }
 
                         $shortDescription = trim(
-                            (string) ($package['short_description'] ?? '')
+                            (string) (
+                                $package[
+                                    'short_description'
+                                ]
+                                ?? ''
+                            )
                         );
 
                         $fullDescription = trim(
-                            (string) ($package['description'] ?? '')
+                            (string) (
+                                $package[
+                                    'description'
+                                ]
+                                ?? ''
+                            )
                         );
 
-                        if ($fullDescription === '') {
-                            $fullDescription = $shortDescription;
+                        if (
+                            $fullDescription === ''
+                        ) {
+                            $fullDescription =
+                                $shortDescription;
                         }
 
-                        if ($fullDescription === '') {
-                            $fullDescription = 'Complete wedding-event package.';
+                        if (
+                            $fullDescription === ''
+                        ) {
+                            $fullDescription =
+                                'Complete wedding-event package.';
                         }
 
                         $cateringMenu = trim(
-                            (string) ($package['catering_menu'] ?? '')
+                            (string) (
+                                $package[
+                                    'catering_menu'
+                                ]
+                                ?? ''
+                            )
                         );
 
                         $decorationType = trim(
-                            (string) ($package['decoration_type'] ?? '')
+                            (string) (
+                                $package[
+                                    'decoration_type'
+                                ]
+                                ?? ''
+                            )
                         );
 
-                        $featureText = $features !== []
-                            ? implode('||', $features)
-                            : '';
+                        $featureText =
+                            $features !== []
+                                ? implode(
+                                    '||',
+                                    $features
+                                )
+                                : '';
 
                         $imageUrls = array_map(
-                            static fn (array $image): string => (string) $image['url'],
+                            static fn (
+                                array $image
+                            ): string =>
+                                (string) $image['url'],
                             $previewImages
                         );
+
                         ?>
 
-                        <article class="manager-package-card">
+                        <article
+                            class="manager-package-card"
+                        >
 
-                            <div class="manager-package-main-image-wrap">
+                            <div
+                                class="manager-package-main-image-wrap"
+                            >
 
                                 <img
                                     class="manager-package-main-image"
-                                    id="managerPackageCardMainImage<?= e((string) $packageId) ?>"
-                                    src="<?= e($mainImage) ?>"
-                                    alt="<?= e((string) $package['name']) ?>"
+                                    id="managerPackageCardMainImage<?= e(
+                                        (string) $packageId
+                                    ) ?>"
+                                    src="<?= e(
+                                        $mainImage
+                                    ) ?>"
+                                    alt="<?= e(
+                                        (string) (
+                                            $package['name']
+                                        )
+                                    ) ?>"
                                 >
 
-                                <span class="manager-package-main-badge">
-                                    <i class="fa-regular fa-image"></i>
+                                <span
+                                    class="manager-package-main-badge"
+                                >
+                                    <i
+                                        class="fa-regular fa-image"
+                                    ></i>
+
                                     Main Photo
                                 </span>
 
                             </div>
 
-                            <div class="manager-package-card-body">
+                            <div
+                                class="manager-package-card-body"
+                            >
 
-                                <span class="manager-package-status">
+                                <span
+                                    class="manager-package-status"
+                                >
                                     Available
                                 </span>
 
-                                <div class="manager-package-card-head">
+                                <div
+                                    class="manager-package-card-head"
+                                >
 
                                     <h3>
-                                        <?= e((string) $package['name']) ?>
+                                        <?= e(
+                                            (string) (
+                                                $package[
+                                                    'name'
+                                                ]
+                                            )
+                                        ) ?>
                                     </h3>
 
-                                    <strong class="manager-package-price">
+                                    <strong
+                                        class="manager-package-price"
+                                    >
                                         <?= e(
                                             format_package_price(
-                                                (float) $package['price']
+                                                (float) (
+                                                    $package[
+                                                        'price'
+                                                    ]
+                                                )
                                             )
                                         ) ?>
                                     </strong>
 
                                 </div>
 
-                                <p class="manager-package-description">
+                                <p
+                                    class="manager-package-description"
+                                >
                                     <?= e(
-                                        $shortDescription !== ''
+                                        $shortDescription
+                                        !== ''
                                             ? $shortDescription
-                                            : package_card_description($package)
+                                            : package_card_description(
+                                                $package
+                                            )
                                     ) ?>
                                 </p>
 
-                                <div class="manager-package-thumbnails">
+                                <div
+                                    class="manager-package-thumbnails"
+                                >
 
-                                    <?php foreach ($previewImages as $index => $previewImage): ?>
+                                    <?php foreach (
+                                        $previewImages
+                                        as $index =>
+                                            $previewImage
+                                    ): ?>
 
                                         <button
                                             class="manager-package-thumbnail <?= $index === 0
                                                 ? 'active'
                                                 : '' ?>"
                                             type="button"
-                                            data-card-target="managerPackageCardMainImage<?= e((string) $packageId) ?>"
-                                            data-card-image="<?= e((string) $previewImage['url']) ?>"
-                                            data-card-is-main="<?= $previewImage['is_main']
+                                            data-card-target="managerPackageCardMainImage<?= e(
+                                                (string) $packageId
+                                            ) ?>"
+                                            data-card-image="<?= e(
+                                                (string) (
+                                                    $previewImage[
+                                                        'url'
+                                                    ]
+                                                )
+                                            ) ?>"
+                                            data-card-is-main="<?= $previewImage[
+                                                'is_main'
+                                            ]
                                                 ? 'true'
                                                 : 'false' ?>"
-                                            aria-label="<?= $previewImage['is_main']
+                                            aria-label="<?= $previewImage[
+                                                'is_main'
+                                            ]
                                                 ? 'Show original main package photo'
                                                 : 'Show package gallery photo '
-                                                    . e((string) $index) ?>"
+                                                    . e(
+                                                        (string) $index
+                                                    ) ?>"
                                         >
                                             <img
-                                                src="<?= e((string) $previewImage['url']) ?>"
-                                                alt="<?= $previewImage['is_main']
+                                                src="<?= e(
+                                                    (string) (
+                                                        $previewImage[
+                                                            'url'
+                                                        ]
+                                                    )
+                                                ) ?>"
+                                                alt="<?= $previewImage[
+                                                    'is_main'
+                                                ]
                                                     ? 'Original main package photo'
                                                     : 'Package gallery photo '
-                                                        . e((string) $index) ?>"
+                                                        . e(
+                                                            (string) $index
+                                                        ) ?>"
                                             >
 
-                                            <?php if ($previewImage['is_main']): ?>
-                                                <span>Main</span>
+                                            <?php if (
+                                                $previewImage[
+                                                    'is_main'
+                                                ]
+                                            ): ?>
+
+                                                <span>
+                                                    Main
+                                                </span>
+
                                             <?php endif; ?>
                                         </button>
 
@@ -543,16 +964,22 @@ $currentYear = date('Y');
 
                                 </div>
 
-                                <ul class="manager-package-details">
+                                <ul
+                                    class="manager-package-details"
+                                >
 
                                     <li>
-                                        <i class="fa-solid fa-users"></i>
+                                        <i
+                                            class="fa-solid fa-users"
+                                        ></i>
 
                                         Up to
                                         <?= e(
                                             number_format(
                                                 (int) (
-                                                    $package['guest_capacity']
+                                                    $package[
+                                                        'guest_capacity'
+                                                    ]
                                                     ?? 0
                                                 )
                                             )
@@ -561,56 +988,88 @@ $currentYear = date('Y');
                                     </li>
 
                                     <li>
-                                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                        <i
+                                            class="fa-solid fa-wand-magic-sparkles"
+                                        ></i>
 
                                         <?= e(
-                                            $decorationType !== ''
+                                            $decorationType
+                                            !== ''
                                                 ? $decorationType
                                                 : 'Wedding decoration included'
                                         ) ?>
                                     </li>
 
                                     <li>
-                                        <i class="fa-solid fa-music"></i>
-                                        <?= e($musicText) ?>
+                                        <i
+                                            class="fa-solid fa-music"
+                                        ></i>
+
+                                        <?= e(
+                                            $musicText
+                                        ) ?>
                                     </li>
 
                                 </ul>
 
-                                <div class="manager-package-actions">
+                                <div
+                                    class="manager-package-actions"
+                                >
 
                                     <button
                                         class="manager-package-details-button"
                                         type="button"
                                         data-package-details
-                                        data-id="<?= e((string) $packageId) ?>"
-                                        data-name="<?= e((string) $package['name']) ?>"
-                                        data-price="<?= e(
-                                            format_package_price(
-                                                (float) $package['price']
+                                        data-id="<?= e(
+                                            (string) $packageId
+                                        ) ?>"
+                                        data-name="<?= e(
+                                            (string) (
+                                                $package[
+                                                    'name'
+                                                ]
                                             )
                                         ) ?>"
-                                        data-description="<?= e($fullDescription) ?>"
+                                        data-price="<?= e(
+                                            format_package_price(
+                                                (float) (
+                                                    $package[
+                                                        'price'
+                                                    ]
+                                                )
+                                            )
+                                        ) ?>"
+                                        data-description="<?= e(
+                                            $fullDescription
+                                        ) ?>"
                                         data-decoration="<?= e(
-                                            $decorationType !== ''
+                                            $decorationType
+                                            !== ''
                                                 ? $decorationType
                                                 : 'Not specified'
                                         ) ?>"
                                         data-guests="<?= e(
                                             number_format(
                                                 (int) (
-                                                    $package['guest_capacity']
+                                                    $package[
+                                                        'guest_capacity'
+                                                    ]
                                                     ?? 0
                                                 )
                                             )
                                         ) ?>"
                                         data-catering="<?= e(
-                                            $cateringMenu !== ''
+                                            $cateringMenu
+                                            !== ''
                                                 ? $cateringMenu
                                                 : 'Not specified'
                                         ) ?>"
-                                        data-music="<?= e($musicText) ?>"
-                                        data-features="<?= e($featureText) ?>"
+                                        data-music="<?= e(
+                                            $musicText
+                                        ) ?>"
+                                        data-features="<?= e(
+                                            $featureText
+                                        ) ?>"
                                         data-images="<?= e(
                                             (string) json_encode(
                                                 $imageUrls,
@@ -626,7 +1085,8 @@ $currentYear = date('Y');
                                         class="manager-package-book-button"
                                         href="<?= e(
                                             url(
-                                                '/booking_manager/booking.php?package_id='
+                                                '/booking_manager/booking.php'
+                                                . '?package_id='
                                                 . $packageId
                                             )
                                         ) ?>"
@@ -649,8 +1109,11 @@ $currentYear = date('Y');
         </section>
 
         <footer class="manager-view-footer">
-            © <?= e((string) $currentYear) ?>
-            Wedding Event Planner. All rights reserved.
+            © <?= e(
+                (string) $currentYear
+            ) ?>
+            Wedding Event Planner.
+            All rights reserved.
         </footer>
 
     </main>
@@ -658,10 +1121,18 @@ $currentYear = date('Y');
     <div
         class="manager-package-modal"
         id="managerPackageModal"
+        data-booking-base="<?= e(
+            url(
+                '/booking_manager/booking.php'
+                . '?package_id='
+            )
+        ) ?>"
         aria-hidden="true"
     >
 
-        <div class="manager-package-modal-content">
+        <div
+            class="manager-package-modal-content"
+        >
 
             <button
                 class="manager-package-modal-close"
@@ -672,11 +1143,15 @@ $currentYear = date('Y');
                 &times;
             </button>
 
-            <div class="manager-package-modal-grid">
+            <div
+                class="manager-package-modal-grid"
+            >
 
                 <div>
 
-                    <div class="manager-package-modal-image-wrap">
+                    <div
+                        class="manager-package-modal-image-wrap"
+                    >
 
                         <img
                             class="manager-package-modal-main-image"
@@ -689,7 +1164,10 @@ $currentYear = date('Y');
                             class="manager-package-modal-main-badge"
                             id="managerPackageModalMainBadge"
                         >
-                            <i class="fa-regular fa-image"></i>
+                            <i
+                                class="fa-regular fa-image"
+                            ></i>
+
                             Main Photo
                         </span>
 
@@ -702,9 +1180,13 @@ $currentYear = date('Y');
 
                 </div>
 
-                <div class="manager-package-modal-info">
+                <div
+                    class="manager-package-modal-info"
+                >
 
-                    <h2 id="managerPackageModalName"></h2>
+                    <h2
+                        id="managerPackageModalName"
+                    ></h2>
 
                     <div
                         class="manager-package-modal-price"
@@ -716,31 +1198,65 @@ $currentYear = date('Y');
                         id="managerPackageModalDescription"
                     ></p>
 
-                    <div class="manager-package-information-row">
-                        <strong>Decoration:</strong>
-                        <span id="managerPackageModalDecoration"></span>
+                    <div
+                        class="manager-package-information-row"
+                    >
+                        <strong>
+                            Decoration:
+                        </strong>
+
+                        <span
+                            id="managerPackageModalDecoration"
+                        ></span>
                     </div>
 
-                    <div class="manager-package-information-row">
-                        <strong>Guest capacity:</strong>
-                        <span id="managerPackageModalGuests"></span>
+                    <div
+                        class="manager-package-information-row"
+                    >
+                        <strong>
+                            Guest capacity:
+                        </strong>
+
+                        <span
+                            id="managerPackageModalGuests"
+                        ></span>
                     </div>
 
-                    <div class="manager-package-information-row">
-                        <strong>Music:</strong>
-                        <span id="managerPackageModalMusic"></span>
+                    <div
+                        class="manager-package-information-row"
+                    >
+                        <strong>
+                            Music:
+                        </strong>
+
+                        <span
+                            id="managerPackageModalMusic"
+                        ></span>
                     </div>
 
-                    <div class="manager-package-information-row">
-                        <strong>Catering menu:</strong>
-                        <span id="managerPackageModalCatering"></span>
+                    <div
+                        class="manager-package-information-row"
+                    >
+                        <strong>
+                            Catering menu:
+                        </strong>
+
+                        <span
+                            id="managerPackageModalCatering"
+                        ></span>
                     </div>
 
-                    <div class="manager-package-feature-box">
+                    <div
+                        class="manager-package-feature-box"
+                    >
 
-                        <h3>Additional Features</h3>
+                        <h3>
+                            Additional Features
+                        </h3>
 
-                        <ul id="managerPackageModalFeatures"></ul>
+                        <ul
+                            id="managerPackageModalFeatures"
+                        ></ul>
 
                     </div>
 
@@ -760,351 +1276,20 @@ $currentYear = date('Y');
 
     </div>
 
-    <script>
-        "use strict";
-
-        const bookingSidebar = document.getElementById(
-            "bookingSidebar"
-        );
-
-        const bookingSidebarOverlay = document.getElementById(
-            "bookingSidebarOverlay"
-        );
-
-        const bookingMenuButton = document.getElementById(
-            "bookingMenuButton"
-        );
-
-        function closeBookingSidebar() {
-            bookingSidebar?.classList.remove("open");
-            bookingSidebarOverlay?.classList.remove("open");
-        }
-
-        bookingMenuButton?.addEventListener(
-            "click",
-            function () {
-                bookingSidebar?.classList.toggle("open");
-                bookingSidebarOverlay?.classList.toggle("open");
-            }
-        );
-
-        bookingSidebarOverlay?.addEventListener(
-            "click",
-            closeBookingSidebar
-        );
-
-        document.addEventListener(
-            "click",
-            function (event) {
-                const thumbnail = event.target.closest(
-                    ".manager-package-thumbnail"
-                );
-
-                if (!thumbnail) {
-                    return;
-                }
-
-                const mainImage = document.getElementById(
-                    thumbnail.dataset.cardTarget || ""
-                );
-
-                if (
-                    !mainImage
-                    || !thumbnail.dataset.cardImage
-                ) {
-                    return;
-                }
-
-                mainImage.src =
-                    thumbnail.dataset.cardImage;
-
-                const card = thumbnail.closest(
-                    ".manager-package-card"
-                );
-
-                card
-                    ?.querySelectorAll(
-                        ".manager-package-thumbnail"
-                    )
-                    .forEach(function (item) {
-                        item.classList.remove("active");
-                    });
-
-                thumbnail.classList.add("active");
-
-                const badge = card?.querySelector(
-                    ".manager-package-main-badge"
-                );
-
-                badge?.classList.toggle(
-                    "hidden",
-                    thumbnail.dataset.cardIsMain !== "true"
-                );
-            }
-        );
-
-        const packageModal = document.getElementById(
-            "managerPackageModal"
-        );
-
-        const packageModalClose = document.getElementById(
-            "managerPackageModalClose"
-        );
-
-        const packageMainImage = document.getElementById(
-            "managerPackageModalMainImage"
-        );
-
-        const packageMainBadge = document.getElementById(
-            "managerPackageModalMainBadge"
-        );
-
-        const packageThumbnails = document.getElementById(
-            "managerPackageModalThumbnails"
-        );
-
-        const packageName = document.getElementById(
-            "managerPackageModalName"
-        );
-
-        const packagePrice = document.getElementById(
-            "managerPackageModalPrice"
-        );
-
-        const packageDescription = document.getElementById(
-            "managerPackageModalDescription"
-        );
-
-        const packageDecoration = document.getElementById(
-            "managerPackageModalDecoration"
-        );
-
-        const packageGuests = document.getElementById(
-            "managerPackageModalGuests"
-        );
-
-        const packageMusic = document.getElementById(
-            "managerPackageModalMusic"
-        );
-
-        const packageCatering = document.getElementById(
-            "managerPackageModalCatering"
-        );
-
-        const packageFeatures = document.getElementById(
-            "managerPackageModalFeatures"
-        );
-
-        const packageBookButton = document.getElementById(
-            "managerPackageModalBook"
-        );
-
-        function renderModalImages(images) {
-            packageThumbnails.innerHTML = "";
-
-            images.forEach(function (imageUrl, index) {
-                const button = document.createElement("button");
-                const image = document.createElement("img");
-
-                button.type = "button";
-                button.className =
-                    "manager-package-modal-thumbnail";
-
-                if (index === 0) {
-                    button.classList.add("active");
-                }
-
-                image.src = imageUrl;
-
-                image.alt = index === 0
-                    ? "Original main package photo"
-                    : "Package gallery photo " + index;
-
-                button.appendChild(image);
-
-                if (index === 0) {
-                    const label =
-                        document.createElement("span");
-
-                    label.textContent = "Main";
-
-                    button.appendChild(label);
-                }
-
-                button.addEventListener(
-                    "click",
-                    function () {
-                        packageMainImage.src = imageUrl;
-
-                        packageThumbnails
-                            .querySelectorAll(
-                                ".manager-package-modal-thumbnail"
-                            )
-                            .forEach(function (item) {
-                                item.classList.remove("active");
-                            });
-
-                        button.classList.add("active");
-
-                        packageMainBadge.classList.toggle(
-                            "hidden",
-                            index !== 0
-                        );
-                    }
-                );
-
-                packageThumbnails.appendChild(button);
-            });
-        }
-
-        document
-            .querySelectorAll("[data-package-details]")
-            .forEach(function (button) {
-                button.addEventListener(
-                    "click",
-                    function () {
-                        let images = [];
-
-                        try {
-                            images = JSON.parse(
-                                button.dataset.images || "[]"
-                            );
-                        } catch (error) {
-                            images = [];
-                        }
-
-                        packageName.textContent =
-                            button.dataset.name || "Package";
-
-                        packagePrice.textContent =
-                            button.dataset.price || "";
-
-                        packageDescription.textContent =
-                            button.dataset.description || "";
-
-                        packageDecoration.textContent =
-                            button.dataset.decoration
-                            || "Not specified";
-
-                        packageGuests.textContent =
-                            (button.dataset.guests || "0")
-                            + " guests";
-
-                        packageMusic.textContent =
-                            button.dataset.music
-                            || "Not specified";
-
-                        packageCatering.textContent =
-                            button.dataset.catering
-                            || "Not specified";
-
-                        packageBookButton.href =
-                            "<?= e(
-                                url(
-                                    '/booking_manager/booking.php?package_id='
-                                )
-                            ) ?>"
-                            + (button.dataset.id || "");
-
-                        packageFeatures.innerHTML = "";
-
-                        const features =
-                            button.dataset.features
-                                ? button.dataset.features.split("||")
-                                : [];
-
-                        if (features.length === 0) {
-                            const item =
-                                document.createElement("li");
-
-                            item.textContent =
-                                "No additional features listed.";
-
-                            packageFeatures.appendChild(item);
-                        } else {
-                            features.forEach(function (feature) {
-                                const item =
-                                    document.createElement("li");
-
-                                const icon =
-                                    document.createElement("i");
-
-                                const text =
-                                    document.createElement("span");
-
-                                icon.className =
-                                    "fa-solid fa-check";
-
-                                text.textContent = feature;
-
-                                item.append(icon, text);
-
-                                packageFeatures.appendChild(item);
-                            });
-                        }
-
-                        if (images.length > 0) {
-                            packageMainImage.src = images[0];
-
-                            packageMainBadge.classList.remove(
-                                "hidden"
-                            );
-
-                            renderModalImages(images);
-                        }
-
-                        packageModal.classList.add("open");
-
-                        packageModal.setAttribute(
-                            "aria-hidden",
-                            "false"
-                        );
-
-                        document.body.classList.add(
-                            "manager-package-modal-open"
-                        );
-                    }
-                );
-            });
-
-        function closePackageModal() {
-            packageModal.classList.remove("open");
-
-            packageModal.setAttribute(
-                "aria-hidden",
-                "true"
-            );
-
-            document.body.classList.remove(
-                "manager-package-modal-open"
-            );
-        }
-
-        packageModalClose?.addEventListener(
-            "click",
-            closePackageModal
-        );
-
-        packageModal?.addEventListener(
-            "click",
-            function (event) {
-                if (event.target === packageModal) {
-                    closePackageModal();
-                }
-            }
-        );
-
-        document.addEventListener(
-            "keydown",
-            function (event) {
-                if (event.key === "Escape") {
-                    closePackageModal();
-                }
-            }
-        );
-    </script>
-
-    <?php require __DIR__ . '/../includes/pwa_scripts.php'; ?>
+    <script
+        src="<?= e(
+            url(
+                '/assets/js/booking_manager_packages.js'
+                . '?v=20260702-5'
+            )
+        ) ?>"
+        defer
+    ></script>
+
+    <?php
+    require __DIR__
+        . '/../includes/pwa_scripts.php';
+    ?>
 
 </body>
 </html>

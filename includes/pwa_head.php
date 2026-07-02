@@ -181,6 +181,7 @@ $weddingSharedUi = (static function (): array {
             $customerAbout,
     ];
 })();
+
 ?>
 
 <meta
@@ -287,6 +288,16 @@ $weddingSharedUi = (static function (): array {
         href="<?= e(
             url(
                 '/assets/css/admin_listing_grid_fix.css'
+            )
+        ) ?>"
+    >
+
+    <link
+        rel="stylesheet"
+        href="<?= e(
+            url(
+                '/assets/css/admin_card_text_polish.css'
+                . '?v=20260703-1'
             )
         ) ?>"
     >
