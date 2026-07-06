@@ -274,6 +274,7 @@ if ($activeVenueRows !== []) {
 |--------------------------------------------------------------------------
 */
 
+$topVenueId = 0;
 $topVenueName = '';
 $topVenueBookings = 0;
 
@@ -281,6 +282,7 @@ try {
     $topVenue = $connection
         ->query(
             "SELECT
+                v.id,
                 v.name,
                 COUNT(b.id) AS booking_count
              FROM venues AS v
@@ -288,7 +290,7 @@ try {
                 ON b.venue_id = v.id
              WHERE LOWER(
                 COALESCE(
-                    b.status,
+                    b.booking_status,
                     ''
                 )
              ) NOT IN (
@@ -306,6 +308,11 @@ try {
         ->fetch();
 
     if ($topVenue) {
+        $topVenueId = (int) (
+            $topVenue['id']
+            ?? 0
+        );
+
         $topVenueName = trim(
             (string) (
                 $topVenue['name']
@@ -319,21 +326,145 @@ try {
         );
     }
 } catch (PDOException) {
+    $topVenueId = 0;
     $topVenueName = '';
     $topVenueBookings = 0;
 }
 
 /*
 |--------------------------------------------------------------------------
-| Latest active venues
+| Same-page summary filtering
 |--------------------------------------------------------------------------
 */
 
-$venues = array_slice(
-    $activeVenueRows,
-    0,
-    3
+$currentVenueFilter = strtolower(
+    trim(
+        (string) (
+            $_GET['filter']
+            ?? 'latest'
+        )
+    )
 );
+
+if (
+    !in_array(
+        $currentVenueFilter,
+        [
+            'latest',
+            'active',
+            'inactive',
+            'popular',
+        ],
+        true
+    )
+) {
+    $currentVenueFilter = 'latest';
+}
+
+$venueSectionTitle =
+    'Available Wedding Venues';
+
+$venueSectionDescription =
+    'Maximum venue capacity: '
+    . number_format(
+        $maximumCapacity
+    )
+    . ' guests. Select a venue to view its complete details.';
+
+$venueFilterLabel = '';
+
+$venueEmptyTitle =
+    'No active venues found';
+
+$venueEmptyText =
+    'Venues activated by the Admin will appear here automatically.';
+
+switch ($currentVenueFilter) {
+    case 'active':
+        $venueSectionTitle =
+            'Active Wedding Venues';
+
+        $venueSectionDescription =
+            'These venues are currently visible on the customer website.';
+
+        $venueFilterLabel =
+            'Active Wedding Venues';
+
+        $venueEmptyTitle =
+            'No active venues found';
+
+        $venueEmptyText =
+            'There are currently no active venues available.';
+
+        $venues = $activeVenueRows;
+        break;
+
+    case 'inactive':
+        $venueSectionTitle =
+            'Inactive Wedding Venues';
+
+        $venueSectionDescription =
+            'These venues are currently hidden from the customer website.';
+
+        $venueFilterLabel =
+            'Inactive Wedding Venues';
+
+        $venueEmptyTitle =
+            'No inactive venues found';
+
+        $venueEmptyText =
+            'There are currently no inactive venues available.';
+
+        $venues = $inactiveVenueRows;
+        break;
+
+    case 'popular':
+        $venueSectionTitle =
+            'Popular Wedding Venue';
+
+        $venueSectionDescription =
+            'The most-booked venue based on current booking records.';
+
+        $venueFilterLabel =
+            'Popular Wedding Venue';
+
+        $venueEmptyTitle =
+            'No popular venue found';
+
+        $venueEmptyText =
+            'A popular venue will appear after venue bookings are created.';
+
+        $venues = [];
+
+        if (
+            $topVenueId > 0
+            && $topVenueBookings > 0
+        ) {
+            foreach ($allVenueRows as $venueRow) {
+                if (
+                    (int) (
+                        $venueRow['id']
+                        ?? 0
+                    ) === $topVenueId
+                ) {
+                    $venues = [
+                        $venueRow,
+                    ];
+
+                    break;
+                }
+            }
+        }
+        break;
+
+    default:
+        $venues = array_slice(
+            $activeVenueRows,
+            0,
+            3
+        );
+        break;
+}
 
 $currentYear = date('Y');
 
@@ -565,30 +696,30 @@ $currentYear = date('Y');
                 </div>
 
                 <a
-    class="booking-notification"
-    href="<?= e(
-        url(
-            '/booking_manager/notifications.php'
-        )
-    ) ?>"
-    aria-label="Open notifications"
->
-    <i class="fa-solid fa-bell"></i>
+                    class="booking-notification"
+                    href="<?= e(
+                        url(
+                            '/booking_manager/notifications.php'
+                        )
+                    ) ?>"
+                    aria-label="Open notifications"
+                >
+                    <i class="fa-solid fa-bell"></i>
 
-    <?php if (
-        $unreadNotifications > 0
-    ): ?>
+                    <?php if (
+                        $unreadNotifications > 0
+                    ): ?>
 
-        <span>
-            <?= e(
-                $unreadNotifications > 99
-                    ? '99+'
-                    : (string) $unreadNotifications
-            ) ?>
-        </span>
+                        <span>
+                            <?= e(
+                                $unreadNotifications > 99
+                                    ? '99+'
+                                    : (string) $unreadNotifications
+                            ) ?>
+                        </span>
 
-    <?php endif; ?>
-</a>
+                    <?php endif; ?>
+                </a>
 
                 <a href="<?= e(
                     url(
@@ -644,10 +775,13 @@ $currentYear = date('Y');
             </a>
 
             <a
-                class="manager-view-summary-card manager-venue-summary-card manager-venue-summary-active"
+                class="manager-view-summary-card manager-venue-summary-card manager-venue-summary-active <?= $currentVenueFilter === 'active'
+                    ? 'selected'
+                    : '' ?>"
                 href="<?= e(
                     url(
-                        '/booking_manager/all_venues.php?status=active'
+                        '/booking_manager/venues.php'
+                        . '?filter=active#venueList'
                     )
                 ) ?>"
             >
@@ -675,10 +809,13 @@ $currentYear = date('Y');
             </a>
 
             <a
-                class="manager-view-summary-card manager-venue-summary-card manager-venue-summary-inactive"
+                class="manager-view-summary-card manager-venue-summary-card manager-venue-summary-inactive <?= $currentVenueFilter === 'inactive'
+                    ? 'selected'
+                    : '' ?>"
                 href="<?= e(
                     url(
-                        '/booking_manager/all_venues.php?status=inactive'
+                        '/booking_manager/venues.php'
+                        . '?filter=inactive#venueList'
                     )
                 ) ?>"
             >
@@ -705,8 +842,16 @@ $currentYear = date('Y');
 
             </a>
 
-            <article
-                class="manager-view-summary-card manager-venue-summary-card manager-venue-summary-popular"
+            <a
+                class="manager-view-summary-card manager-venue-summary-card manager-venue-summary-popular <?= $currentVenueFilter === 'popular'
+                    ? 'selected'
+                    : '' ?>"
+                href="<?= e(
+                    url(
+                        '/booking_manager/venues.php'
+                        . '?filter=popular#venueList'
+                    )
+                ) ?>"
             >
 
                 <div
@@ -750,28 +895,30 @@ $currentYear = date('Y');
 
                 </div>
 
-            </article>
+            </a>
 
         </section>
 
-        <section class="manager-venue-box">
+        <section
+            class="manager-venue-box"
+            id="venueList"
+            style="scroll-margin-top: 18px;"
+        >
 
             <div class="manager-venue-heading">
 
                 <div>
 
                     <h2>
-                        Available Wedding Venues
+                        <?= e(
+                            $venueSectionTitle
+                        ) ?>
                     </h2>
 
                     <p>
-                        Maximum venue capacity:
                         <?= e(
-                            number_format(
-                                $maximumCapacity
-                            )
+                            $venueSectionDescription
                         ) ?>
-                        guests. Select a venue to view its complete details.
                     </p>
 
                 </div>
@@ -791,6 +938,54 @@ $currentYear = date('Y');
             </div>
 
             <?php if (
+                $currentVenueFilter
+                !== 'latest'
+            ): ?>
+
+                <div
+                    style="
+                        margin: 0 0 18px;
+                        padding: 12px 14px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 14px;
+                        border: 1px solid #efd4df;
+                        border-radius: 10px;
+                        background: #fff8fb;
+                        color: #685e64;
+                        font-size: 13px;
+                    "
+                >
+                    <span>
+                        Showing:
+                        <strong style="color: #4b4147;">
+                            <?= e(
+                                $venueFilterLabel
+                            ) ?>
+                        </strong>
+                    </span>
+
+                    <a
+                        href="<?= e(
+                            url(
+                                '/booking_manager/venues.php#venueList'
+                            )
+                        ) ?>"
+                        style="
+                            color: #a4004d;
+                            font-weight: 700;
+                            text-decoration: none;
+                            white-space: nowrap;
+                        "
+                    >
+                        Show Latest Venues
+                    </a>
+                </div>
+
+            <?php endif; ?>
+
+            <?php if (
                 $venues === []
             ): ?>
 
@@ -799,11 +994,15 @@ $currentYear = date('Y');
                     <i class="fa-solid fa-hotel"></i>
 
                     <h3>
-                        No active venues found
+                        <?= e(
+                            $venueEmptyTitle
+                        ) ?>
                     </h3>
 
                     <p>
-                        Venues activated by the Admin will appear here automatically.
+                        <?= e(
+                            $venueEmptyText
+                        ) ?>
                     </p>
 
                 </div>
@@ -956,8 +1155,27 @@ $currentYear = date('Y');
 
                             <div class="manager-venue-card-body">
 
-                                <span class="manager-venue-status">
-                                    Date Based
+                                <?php
+                                $venueIsActive =
+                                    strtolower(
+                                        trim(
+                                            (string) (
+                                                $venue['status']
+                                                ?? ''
+                                            )
+                                        )
+                                    ) === 'active';
+                                ?>
+
+                                <span
+                                    class="manager-venue-status"
+                                    <?= !$venueIsActive
+                                        ? 'style="background: #fff2df; color: #b56a00;"'
+                                        : '' ?>
+                                >
+                                    <?= $venueIsActive
+                                        ? 'Date Based'
+                                        : 'Inactive' ?>
                                 </span>
 
                                 <h3>

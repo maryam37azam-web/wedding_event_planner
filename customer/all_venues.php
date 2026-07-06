@@ -6,10 +6,23 @@ require_once __DIR__ . '/../includes/role_check.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/venue_helpers.php';
 
-require_role('customer');
-
 $connection = db();
-$customerId = (int) $_SESSION['user_id'];
+
+$currentRole = trim(
+    (string) (
+        $_SESSION['role']
+        ?? ''
+    )
+);
+
+$currentUserId = (int) (
+    $_SESSION['user_id']
+    ?? 0
+);
+
+$isCustomerLoggedIn =
+    $currentRole === 'customer'
+    && $currentUserId > 0;
 
 /*
 |--------------------------------------------------------------------------
@@ -117,49 +130,85 @@ $formatVenuePrice = static function (
 
 /*
 |--------------------------------------------------------------------------
-| Load customer profile
+| Load optional customer profile
 |--------------------------------------------------------------------------
 */
 
-$customerStatement = $connection->prepare(
-    'SELECT
-        full_name,
-        email,
-        profile_image,
-        about
-     FROM users
-     WHERE id = ?
-     AND role = ?
-     LIMIT 1'
-);
+$customerName = 'Guest';
+$customerAbout =
+    'Browse active wedding venues';
+$customerImage =
+    url('/assets/icons/icon-192.png');
+$customerAccountPath =
+    '/auth/customer_login.php';
 
-$customerStatement->execute([
-    $customerId,
-    'customer',
-]);
+if ($isCustomerLoggedIn) {
+    $customerStatement =
+        $connection->prepare(
+            'SELECT
+                full_name,
+                email,
+                profile_image,
+                about
+             FROM users
+             WHERE id = ?
+             AND role = ?
+             LIMIT 1'
+        );
 
-$customer = $customerStatement->fetch();
+    $customerStatement->execute([
+        $currentUserId,
+        'customer',
+    ]);
 
-if (!$customer) {
-    redirect('/auth/logout.php');
-}
+    $customer =
+        $customerStatement->fetch();
 
-$customerImage = !empty($customer['profile_image'])
-    ? url(
-        '/'
-        . ltrim(
-            (string) $customer['profile_image'],
-            '/'
-        )
-    )
-    : url('/assets/icons/icon-192.png');
+    if ($customer) {
+        $customerName = trim(
+            (string) (
+                $customer['full_name']
+                ?? ''
+            )
+        );
 
-$customerAbout = trim(
-    (string) ($customer['about'] ?? '')
-);
+        if ($customerName === '') {
+            $customerName = 'Customer';
+        }
 
-if ($customerAbout === '') {
-    $customerAbout = 'Customer Account';
+        $customerAbout = trim(
+            (string) (
+                $customer['about']
+                ?? ''
+            )
+        );
+
+        if ($customerAbout === '') {
+            $customerAbout =
+                'Customer Account';
+        }
+
+        if (
+            !empty(
+                $customer['profile_image']
+            )
+        ) {
+            $customerImage = url(
+                '/'
+                . ltrim(
+                    (string) $customer[
+                        'profile_image'
+                    ],
+                    '/'
+                )
+            );
+        }
+
+        $customerAccountPath =
+            '/customer/profile.php';
+    } else {
+        $isCustomerLoggedIn = false;
+    }
 }
 
 /*
@@ -453,7 +502,7 @@ $currentYear = date('Y');
         <a
             class="customer-all-venues-brand"
             href="<?= e(
-                url('/customer/dashboard.php')
+                url('/index.php')
             ) ?>"
         >
 
@@ -474,7 +523,7 @@ $currentYear = date('Y');
         <a
             class="customer-all-venues-user"
             href="<?= e(
-                url('/customer/profile.php')
+                url($customerAccountPath)
             ) ?>"
             aria-label="Open customer profile"
         >
@@ -483,7 +532,7 @@ $currentYear = date('Y');
 
                 <strong>
                     <?= e(
-                        (string) $customer['full_name']
+                        $customerName
                     ) ?>
                 </strong>
 
@@ -495,7 +544,7 @@ $currentYear = date('Y');
 
             <img
                 src="<?= e($customerImage) ?>"
-                alt="Customer profile"
+                alt="<?= e($isCustomerLoggedIn ? 'Customer profile' : 'Login') ?>"
             >
 
         </a>
@@ -942,12 +991,15 @@ $currentYear = date('Y');
                                     class="customer-all-venue-book"
                                     href="<?= e(
                                         url(
-                                            '/customer/booking.php?venue_id='
-                                            . $venueId
+                                            $isCustomerLoggedIn
+                                                ? '/venue_details.php?id=' . $venueId
+                                                : '/auth/customer_login.php'
                                         )
                                     ) ?>"
                                 >
-                                    Book Venue
+                                    <?= $isCustomerLoggedIn
+                                        ? 'Book Venue'
+                                        : 'Login to Book' ?>
                                 </a>
 
                             </div>
@@ -1164,7 +1216,9 @@ $currentYear = date('Y');
                         id="customerAllVenueModalBook"
                         href="#"
                     >
-                        Book This Venue
+                        <?= $isCustomerLoggedIn
+                            ? 'Book This Venue'
+                            : 'Login to Book' ?>
                     </a>
 
                 </div>
@@ -1426,15 +1480,16 @@ $currentYear = date('Y');
                             + " guests";
 
                         modalBook.href =
-                            "<?= e(
-                                url(
-                                    '/customer/booking.php?venue_id='
+                            <?= $isCustomerLoggedIn
+                                ? json_encode(
+                                    url('/venue_details.php?id='),
+                                    JSON_UNESCAPED_SLASHES
                                 )
-                            ) ?>"
-                            + (
-                                button.dataset.id
-                                || ""
-                            );
+                                    . ' + (button.dataset.id || "")'
+                                : json_encode(
+                                    url('/auth/customer_login.php'),
+                                    JSON_UNESCAPED_SLASHES
+                                ) ?>;
 
                         modalFacilities.innerHTML = "";
 

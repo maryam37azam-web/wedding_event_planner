@@ -6,56 +6,99 @@ require_once __DIR__ . '/../includes/role_check.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/package_helpers.php';
 
-require_role('customer');
-
 $connection = db();
-$customerId = (int) $_SESSION['user_id'];
 
-/*
-|--------------------------------------------------------------------------
-| Load customer
-|--------------------------------------------------------------------------
-*/
-
-$customerStatement = $connection->prepare(
-    'SELECT
-        full_name,
-        email,
-        profile_image,
-        about
-     FROM users
-     WHERE id = ?
-     AND role = ?
-     LIMIT 1'
-);
-
-$customerStatement->execute([
-    $customerId,
-    'customer',
-]);
-
-$customer = $customerStatement->fetch();
-
-if (!$customer) {
-    redirect('/auth/logout.php');
-}
-
-$customerImage = !empty($customer['profile_image'])
-    ? url(
-        '/'
-        . ltrim(
-            (string) $customer['profile_image'],
-            '/'
-        )
+$currentRole = trim(
+    (string) (
+        $_SESSION['role']
+        ?? ''
     )
-    : url('/assets/icons/icon-192.png');
-
-$customerAbout = trim(
-    (string) ($customer['about'] ?? '')
 );
 
-if ($customerAbout === '') {
-    $customerAbout = 'Customer Account';
+$currentUserId = (int) (
+    $_SESSION['user_id']
+    ?? 0
+);
+
+$isCustomerLoggedIn =
+    $currentRole === 'customer'
+    && $currentUserId > 0;
+
+$customerName = 'Guest';
+$customerAbout =
+    'Browse active wedding packages';
+$customerImage =
+    url('/assets/icons/icon-192.png');
+$customerAccountPath =
+    '/auth/customer_login.php';
+
+if ($isCustomerLoggedIn) {
+    $customerStatement =
+        $connection->prepare(
+            'SELECT
+                full_name,
+                email,
+                profile_image,
+                about
+             FROM users
+             WHERE id = ?
+             AND role = ?
+             LIMIT 1'
+        );
+
+    $customerStatement->execute([
+        $currentUserId,
+        'customer',
+    ]);
+
+    $customer =
+        $customerStatement->fetch();
+
+    if ($customer) {
+        $customerName = trim(
+            (string) (
+                $customer['full_name']
+                ?? ''
+            )
+        );
+
+        if ($customerName === '') {
+            $customerName = 'Customer';
+        }
+
+        $customerAbout = trim(
+            (string) (
+                $customer['about']
+                ?? ''
+            )
+        );
+
+        if ($customerAbout === '') {
+            $customerAbout =
+                'Customer Account';
+        }
+
+        if (
+            !empty(
+                $customer['profile_image']
+            )
+        ) {
+            $customerImage = url(
+                '/'
+                . ltrim(
+                    (string) $customer[
+                        'profile_image'
+                    ],
+                    '/'
+                )
+            );
+        }
+
+        $customerAccountPath =
+            '/customer/profile.php';
+    } else {
+        $isCustomerLoggedIn = false;
+    }
 }
 
 /*
@@ -289,7 +332,7 @@ $currentYear = date('Y');
     <link
         rel="stylesheet"
         href="<?= e(
-            url('/assets/css/customer_all_packages.css')
+            url('/assets/css/customer_all_packages.css?v=2')
         ) ?>"
     >
 </head>
@@ -301,7 +344,7 @@ $currentYear = date('Y');
         <a
             class="customer-all-packages-brand"
             href="<?= e(
-                url('/customer/dashboard.php')
+                url('/index.php')
             ) ?>"
         >
 
@@ -322,7 +365,7 @@ $currentYear = date('Y');
         <a
             class="customer-all-packages-user"
             href="<?= e(
-                url('/customer/profile.php')
+                url($customerAccountPath)
             ) ?>"
             aria-label="Open customer profile"
         >
@@ -331,7 +374,7 @@ $currentYear = date('Y');
 
                 <strong>
                     <?= e(
-                        (string) $customer['full_name']
+                        $customerName
                     ) ?>
                 </strong>
 
@@ -343,7 +386,7 @@ $currentYear = date('Y');
 
             <img
                 src="<?= e($customerImage) ?>"
-                alt="Customer profile"
+                alt="<?= e($isCustomerLoggedIn ? 'Customer profile' : 'Login') ?>"
             >
 
         </a>
@@ -513,6 +556,16 @@ $currentYear = date('Y');
                     if ($packageName === '') {
                         $packageName =
                             'Untitled Package';
+                    }
+
+                    $packageVenue =
+                        package_venue_display(
+                            $package
+                        );
+
+                    if ($packageVenue === '') {
+                        $packageVenue =
+                            'Venue location not specified';
                     }
 
                     $mainImage =
@@ -710,6 +763,16 @@ $currentYear = date('Y');
 
                             </div>
 
+                            <div class="customer-all-package-location">
+
+                                <i class="fa-solid fa-location-dot"></i>
+
+                                <span>
+                                    <?= e($packageVenue) ?>
+                                </span>
+
+                            </div>
+
                             <p class="customer-all-package-description">
                                 <?= e($shortDescription) ?>
                             </p>
@@ -806,6 +869,10 @@ $currentYear = date('Y');
                                             )
                                         )
                                     ) ?>"
+
+                                    data-location="<?= e(
+                                        $packageVenue
+                                    ) ?>"
                                     data-description="<?= e(
                                         $fullDescription
                                     ) ?>"
@@ -844,12 +911,15 @@ $currentYear = date('Y');
                                     class="customer-all-package-book"
                                     href="<?= e(
                                         url(
-                                            '/customer/booking.php?package_id='
-                                            . $packageId
+                                            $isCustomerLoggedIn
+                                                ? '/package_details.php?id=' . $packageId
+                                                : '/auth/customer_login.php'
                                         )
                                     ) ?>"
                                 >
-                                    Book Package
+                                    <?= $isCustomerLoggedIn
+                                        ? 'Book Package'
+                                        : 'Login to Book' ?>
                                 </a>
 
                             </div>
@@ -1040,6 +1110,11 @@ $currentYear = date('Y');
                     <p id="customerAllPackageModalDescription"></p>
 
                     <div class="customer-all-package-information-row">
+                        <strong>Venue location:</strong>
+                        <span id="customerAllPackageModalLocation"></span>
+                    </div>
+
+                    <div class="customer-all-package-information-row">
                         <strong>Decoration:</strong>
                         <span id="customerAllPackageModalDecoration"></span>
                     </div>
@@ -1071,7 +1146,9 @@ $currentYear = date('Y');
                         id="customerAllPackageModalBook"
                         href="#"
                     >
-                        Book This Package
+                        <?= $isCustomerLoggedIn
+                            ? 'Book This Package'
+                            : 'Login to Book' ?>
                     </a>
 
                 </div>
@@ -1183,6 +1260,11 @@ $currentYear = date('Y');
         const modalDescription =
             document.getElementById(
                 "customerAllPackageModalDescription"
+            );
+
+        const modalLocation =
+            document.getElementById(
+                "customerAllPackageModalLocation"
             );
 
         const modalDecoration =
@@ -1331,6 +1413,10 @@ $currentYear = date('Y');
                             button.dataset.description
                             || "";
 
+                        modalLocation.textContent =
+                            button.dataset.location
+                            || "Venue location not specified";
+
                         modalDecoration.textContent =
                             button.dataset.decoration
                             || "Not specified";
@@ -1351,15 +1437,16 @@ $currentYear = date('Y');
                             || "Not specified";
 
                         modalBook.href =
-                            "<?= e(
-                                url(
-                                    '/customer/booking.php?package_id='
+                            <?= $isCustomerLoggedIn
+                                ? json_encode(
+                                    url('/package_details.php?id='),
+                                    JSON_UNESCAPED_SLASHES
                                 )
-                            ) ?>"
-                            + (
-                                button.dataset.id
-                                || ""
-                            );
+                                    . ' + (button.dataset.id || "")'
+                                : json_encode(
+                                    url('/auth/customer_login.php'),
+                                    JSON_UNESCAPED_SLASHES
+                                ) ?>;
 
                         modalFeatures.innerHTML = "";
 

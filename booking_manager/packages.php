@@ -125,15 +125,165 @@ if ($popularPackageBookings > 0) {
     }
 }
 
-$packages = $connection
-    ->query(
-        "SELECT *
-         FROM packages
-         WHERE status = 'active'
-         ORDER BY created_at DESC, id DESC
-         LIMIT 3"
+/*
+|--------------------------------------------------------------------------
+| Same-page summary filtering
+|--------------------------------------------------------------------------
+*/
+
+$currentPackageFilter = strtolower(
+    trim(
+        (string) (
+            $_GET['filter']
+            ?? 'latest'
+        )
     )
-    ->fetchAll();
+);
+
+if (
+    !in_array(
+        $currentPackageFilter,
+        [
+            'latest',
+            'active',
+            'inactive',
+            'popular',
+        ],
+        true
+    )
+) {
+    $currentPackageFilter = 'latest';
+}
+
+$packageSectionTitle =
+    'Available Wedding Packages';
+
+$packageSectionDescription =
+    'View package images, facilities, music options and current pricing.';
+
+$packageFilterLabel = '';
+
+$packageEmptyTitle =
+    'No active packages found';
+
+$packageEmptyText =
+    'Packages activated by the Admin will appear here automatically.';
+
+switch ($currentPackageFilter) {
+    case 'active':
+        $packageSectionTitle =
+            'Active Wedding Packages';
+
+        $packageSectionDescription =
+            'These packages are currently visible on the customer website.';
+
+        $packageFilterLabel =
+            'Active Wedding Packages';
+
+        $packageEmptyTitle =
+            'No active packages found';
+
+        $packageEmptyText =
+            'There are currently no active packages available.';
+
+        $packages = $connection
+            ->query(
+                "SELECT *
+                 FROM packages
+                 WHERE status = 'active'
+                 ORDER BY created_at DESC, id DESC"
+            )
+            ->fetchAll();
+        break;
+
+    case 'inactive':
+        $packageSectionTitle =
+            'Inactive Wedding Packages';
+
+        $packageSectionDescription =
+            'These packages are currently hidden from the customer website.';
+
+        $packageFilterLabel =
+            'Inactive Wedding Packages';
+
+        $packageEmptyTitle =
+            'No inactive packages found';
+
+        $packageEmptyText =
+            'There are currently no inactive packages available.';
+
+        $packages = $connection
+            ->query(
+                "SELECT *
+                 FROM packages
+                 WHERE status = 'inactive'
+                 ORDER BY created_at DESC, id DESC"
+            )
+            ->fetchAll();
+        break;
+
+    case 'popular':
+        $packageSectionTitle =
+            'Popular Wedding Package';
+
+        $packageSectionDescription =
+            'The most-booked package based on current booking records.';
+
+        $packageFilterLabel =
+            'Popular Wedding Package';
+
+        $packageEmptyTitle =
+            'No popular package found';
+
+        $packageEmptyText =
+            'A popular package will appear after package bookings are created.';
+
+        $packages = [];
+
+        $popularPackageId = (int) (
+            $popularPackage['id']
+            ?? 0
+        );
+
+        if (
+            $popularPackageId > 0
+            && $popularPackageBookings > 0
+        ) {
+            $popularPackageStatement =
+                $connection->prepare(
+                    'SELECT *
+                     FROM packages
+                     WHERE id = ?
+                     LIMIT 1'
+                );
+
+            $popularPackageStatement->execute([
+                $popularPackageId,
+            ]);
+
+            $popularPackageRow =
+                $popularPackageStatement->fetch();
+
+            if ($popularPackageRow) {
+                $packages = [
+                    $popularPackageRow,
+                ];
+            }
+        }
+        break;
+
+    default:
+        $packages = $connection
+            ->query(
+                "SELECT *
+                 FROM packages
+                 WHERE status = 'active'
+                 ORDER BY created_at DESC, id DESC
+                 LIMIT 3"
+            )
+            ->fetchAll();
+        break;
+}
 
 $sidebarLinks = [
     [
@@ -461,13 +611,18 @@ $currentYear = date('Y');
             </a>
 
             <a
-                class="summary-card package-summary-card manager-package-summary-card active"
+                class="summary-card package-summary-card manager-package-summary-card active <?= $currentPackageFilter === 'active'
+                    ? 'selected'
+                    : '' ?>"
                 href="<?= e(
                     url(
-                        '/booking_manager/all_packages.php'
-                        . '?status=active'
+                        '/booking_manager/packages.php'
+                        . '?filter=active#packageList'
                     )
                 ) ?>"
+                <?= $currentPackageFilter === 'active'
+                    ? 'style="border-color: rgba(170, 0, 82, 0.24) !important;"'
+                    : '' ?>
             >
 
                 <div
@@ -497,13 +652,18 @@ $currentYear = date('Y');
             </a>
 
             <a
-                class="summary-card package-summary-card manager-package-summary-card inactive"
+                class="summary-card package-summary-card manager-package-summary-card inactive <?= $currentPackageFilter === 'inactive'
+                    ? 'selected'
+                    : '' ?>"
                 href="<?= e(
                     url(
-                        '/booking_manager/all_packages.php'
-                        . '?status=inactive'
+                        '/booking_manager/packages.php'
+                        . '?filter=inactive#packageList'
                     )
                 ) ?>"
+                <?= $currentPackageFilter === 'inactive'
+                    ? 'style="border-color: rgba(170, 0, 82, 0.24) !important;"'
+                    : '' ?>
             >
 
                 <div
@@ -533,13 +693,18 @@ $currentYear = date('Y');
             </a>
 
             <a
-                class="summary-card package-summary-card manager-package-summary-card popular"
+                class="summary-card package-summary-card manager-package-summary-card popular <?= $currentPackageFilter === 'popular'
+                    ? 'selected'
+                    : '' ?>"
                 href="<?= e(
                     url(
-                        '/booking_manager/all_packages.php'
-                        . '?status=all&sort=popular'
+                        '/booking_manager/packages.php'
+                        . '?filter=popular#packageList'
                     )
                 ) ?>"
+                <?= $currentPackageFilter === 'popular'
+                    ? 'style="border-color: rgba(170, 0, 82, 0.24) !important;"'
+                    : '' ?>
             >
 
                 <div
@@ -588,18 +753,25 @@ $currentYear = date('Y');
 
         </section>
 
-        <section class="manager-package-box">
+        <section
+            class="manager-package-box"
+            id="packageList"
+            style="scroll-margin-top: 18px;"
+        >
 
             <div class="manager-package-heading">
 
                 <div>
                     <h2>
-                        Available Wedding Packages
+                        <?= e(
+                            $packageSectionTitle
+                        ) ?>
                     </h2>
 
                     <p>
-                        View package images, facilities,
-                        music options and current pricing.
+                        <?= e(
+                            $packageSectionDescription
+                        ) ?>
                     </p>
                 </div>
 
@@ -620,6 +792,54 @@ $currentYear = date('Y');
 
             </div>
 
+            <?php if (
+                $currentPackageFilter
+                !== 'latest'
+            ): ?>
+
+                <div
+                    style="
+                        margin: 0 0 18px;
+                        padding: 12px 14px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 14px;
+                        border: 1px solid #efd4df;
+                        border-radius: 10px;
+                        background: #fff8fb;
+                        color: #685e64;
+                        font-size: 13px;
+                    "
+                >
+                    <span>
+                        Showing:
+                        <strong style="color: #4b4147;">
+                            <?= e(
+                                $packageFilterLabel
+                            ) ?>
+                        </strong>
+                    </span>
+
+                    <a
+                        href="<?= e(
+                            url(
+                                '/booking_manager/packages.php#packageList'
+                            )
+                        ) ?>"
+                        style="
+                            color: #a4004d;
+                            font-weight: 700;
+                            text-decoration: none;
+                            white-space: nowrap;
+                        "
+                    >
+                        Show Latest Packages
+                    </a>
+                </div>
+
+            <?php endif; ?>
+
             <?php if ($packages === []): ?>
 
                 <div class="manager-package-empty">
@@ -629,12 +849,15 @@ $currentYear = date('Y');
                     ></i>
 
                     <h3>
-                        No active packages found
+                        <?= e(
+                            $packageEmptyTitle
+                        ) ?>
                     </h3>
 
                     <p>
-                        Packages activated by the Admin
-                        will appear here automatically.
+                        <?= e(
+                            $packageEmptyText
+                        ) ?>
                     </p>
 
                 </div>
@@ -841,10 +1064,27 @@ $currentYear = date('Y');
                                 class="manager-package-card-body"
                             >
 
+                                <?php
+                                $packageIsActive =
+                                    strtolower(
+                                        trim(
+                                            (string) (
+                                                $package['status']
+                                                ?? ''
+                                            )
+                                        )
+                                    ) === 'active';
+                                ?>
+
                                 <span
                                     class="manager-package-status"
+                                    <?= !$packageIsActive
+                                        ? 'style="background: #fff2df; color: #b56a00;"'
+                                        : '' ?>
                                 >
-                                    Available
+                                    <?= $packageIsActive
+                                        ? 'Available'
+                                        : 'Inactive' ?>
                                 </span>
 
                                 <div

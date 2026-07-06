@@ -464,9 +464,9 @@ body.package-modal-lock {
 .package-modal-dialog {
     position: relative;
 
-    width: min(1120px, 100%);
+    width: min(1260px, 100%);
     max-height: calc(100vh - 48px);
-    padding: 24px;
+    padding: 22px;
 
     overflow-y: auto;
 
@@ -526,12 +526,91 @@ body.package-modal-lock {
 .package-form-grid {
     display: grid;
     grid-template-columns:
-        repeat(2, minmax(0, 1fr));
-    gap: 14px;
+        repeat(6, minmax(0, 1fr));
+    gap: 12px 14px;
+}
+
+/*
+ * The same package form is used for Create and Edit.
+ * These positions create the compact three-field layout.
+ */
+
+.package-form-grid > .package-input-box:nth-child(1),
+.package-form-grid > .package-input-box:nth-child(2),
+.package-form-grid > .package-input-box:nth-child(3),
+.package-form-grid > .package-input-box:nth-child(4),
+.package-form-grid > .package-input-box:nth-child(5),
+.package-form-grid > .package-input-box:nth-child(6) {
+    grid-column: span 2;
+}
+
+.package-form-grid > .package-input-box:nth-child(1) {
+    order: 1;
+}
+
+.package-form-grid > .package-input-box:nth-child(2) {
+    order: 2;
+}
+
+.package-form-grid > .package-input-box:nth-child(5) {
+    order: 3;
+}
+
+.package-form-grid > .package-input-box:nth-child(3) {
+    order: 4;
+}
+
+.package-form-grid > .package-input-box:nth-child(4) {
+    order: 5;
+}
+
+.package-form-grid > .package-input-box:nth-child(6) {
+    order: 6;
+}
+
+.package-form-grid > .package-input-box:nth-child(7) {
+    grid-column: span 4;
+    order: 7;
+}
+
+.package-form-grid > .package-input-box:nth-child(8) {
+    grid-column: span 2;
+    order: 8;
+}
+
+.package-form-grid > .package-input-box:nth-child(9),
+.package-form-grid > .package-input-box:nth-child(10) {
+    grid-column: span 3;
+}
+
+.package-form-grid > .package-input-box:nth-child(9) {
+    order: 9;
+}
+
+.package-form-grid > .package-input-box:nth-child(10) {
+    order: 10;
+}
+
+.package-form-grid > .package-input-box:nth-child(11),
+.package-form-grid > .package-input-box:nth-child(12),
+.package-form-grid > .package-input-box:nth-child(13) {
+    grid-column: 1 / -1;
+}
+
+.package-form-grid > .package-input-box:nth-child(11) {
+    order: 11;
+}
+
+.package-form-grid > .package-input-box:nth-child(12) {
+    order: 12;
+}
+
+.package-form-grid > .package-input-box:nth-child(13) {
+    order: 13;
 }
 
 .package-span-2 {
-    grid-column: span 2;
+    grid-column: 1 / -1;
 }
 
 .package-input-box {
@@ -573,13 +652,13 @@ body.package-modal-lock {
 
 .package-input-box input[type="text"],
 .package-input-box input[type="number"] {
-    height: 42px;
+    height: 40px;
     padding: 0 12px;
 }
 
 .package-input-box textarea {
-    min-height: 92px;
-    padding: 10px 12px;
+    min-height: 82px;
+    padding: 9px 12px;
 
     resize: vertical;
 
@@ -597,8 +676,8 @@ body.package-modal-lock {
 }
 
 .package-options {
-    min-height: 42px;
-    padding: 9px 11px;
+    min-height: 40px;
+    padding: 8px 11px;
 
     display: flex;
     align-items: center;
@@ -630,7 +709,7 @@ body.package-modal-lock {
 }
 
 .package-image-section-title {
-    margin: 3px 0 10px;
+    margin: 1px 0 8px;
 }
 
 .package-image-section-title h3 {
@@ -751,7 +830,7 @@ input[type="file"]::file-selector-button {
 }
 
 .package-submit-row {
-    margin-top: 18px;
+    margin-top: 14px;
 
     display: flex;
     align-items: center;
@@ -799,6 +878,33 @@ input[type="file"]::file-selector-button {
     }
 }
 
+@media (max-width: 900px) {
+    .package-form-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .package-form-grid > .package-input-box:nth-child(1),
+    .package-form-grid > .package-input-box:nth-child(2),
+    .package-form-grid > .package-input-box:nth-child(3),
+    .package-form-grid > .package-input-box:nth-child(4),
+    .package-form-grid > .package-input-box:nth-child(5),
+    .package-form-grid > .package-input-box:nth-child(6),
+    .package-form-grid > .package-input-box:nth-child(9),
+    .package-form-grid > .package-input-box:nth-child(10) {
+        grid-column: span 1;
+    }
+
+    .package-form-grid > .package-input-box:nth-child(7),
+    .package-form-grid > .package-input-box:nth-child(8),
+    .package-form-grid > .package-input-box:nth-child(11),
+    .package-form-grid > .package-input-box:nth-child(12),
+    .package-form-grid > .package-input-box:nth-child(13),
+    .package-span-2 {
+        grid-column: span 2;
+    }
+}
+
 @media (max-width: 850px) {
     .package-mobile-menu {
         display: flex;
@@ -821,6 +927,7 @@ input[type="file"]::file-selector-button {
         grid-template-columns: 1fr;
     }
 
+    .package-form-grid > .package-input-box:nth-child(n),
     .package-span-2 {
         grid-column: span 1;
     }

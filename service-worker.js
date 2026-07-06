@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_VERSION =
-    "wedding-planner-v115";
+    "wedding-planner-v123";
 
 const BASE_PATH =
     self.location.pathname.replace(
@@ -30,6 +30,8 @@ const STATIC_FILES = [
     `${BASE_PATH}/assets/css/admin_gallery.css`,
     `${BASE_PATH}/assets/css/admin_feedback.css`,
     `${BASE_PATH}/assets/css/admin_card_pricing.css`,
+    `${BASE_PATH}/assets/css/admin_card_text_polish.css`,
+    `${BASE_PATH}/assets/css/admin_package_menu_selector.css`,
 
     `${BASE_PATH}/assets/css/event_manager_consistency.css`,
     `${BASE_PATH}/assets/css/event_manager_dashboard.css`,
@@ -58,6 +60,7 @@ const STATIC_FILES = [
     `${BASE_PATH}/assets/css/customer_booking.css`,
     `${BASE_PATH}/assets/css/customer_my_bookings.css`,
     `${BASE_PATH}/assets/css/customer_feedback.css`,
+    `${BASE_PATH}/assets/css/customer_checkout.css`,
 
     `${BASE_PATH}/assets/css/package_management.css`,
     `${BASE_PATH}/assets/css/venue_management.css`,
@@ -69,6 +72,7 @@ const STATIC_FILES = [
     `${BASE_PATH}/assets/css/all_venues.css`,
     `${BASE_PATH}/assets/css/notifications.css`,
     `${BASE_PATH}/assets/css/public_home.css`,
+    `${BASE_PATH}/assets/css/public_booking_details.css`,
     `${BASE_PATH}/assets/css/sidebar_brand_fancy.css`,
 
     `${BASE_PATH}/assets/images/elegant_wedding_reception_in_grand_hall.png`,
@@ -78,6 +82,8 @@ const STATIC_FILES = [
     `${BASE_PATH}/assets/js/pwa.js`,
     `${BASE_PATH}/assets/js/validation.js`,
     `${BASE_PATH}/assets/js/admin_consistency.js`,
+    `${BASE_PATH}/assets/js/admin_card_text_polish.js`,
+    `${BASE_PATH}/assets/js/admin_package_menu_selector.js`,
     `${BASE_PATH}/assets/js/event_manager_consistency.js`,
     `${BASE_PATH}/assets/js/booking_manager_consistency.js`,
     `${BASE_PATH}/assets/js/customer_consistency.js`,
@@ -85,6 +91,9 @@ const STATIC_FILES = [
     `${BASE_PATH}/assets/js/view_all_back_button.js`,
     `${BASE_PATH}/assets/js/image_file_clear.js`,
     `${BASE_PATH}/assets/js/booking_manager_packages.js`,
+    `${BASE_PATH}/assets/js/public_booking_details.js`,
+    `${BASE_PATH}/assets/js/public_booking_navigation.js`,
+    `${BASE_PATH}/assets/js/customer_checkout.js`,
 
     `${BASE_PATH}/assets/icons/icon-192.png`,
     `${BASE_PATH}/assets/icons/icon-512.png`,

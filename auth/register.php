@@ -10,6 +10,8 @@ $errors = [];
 $fullName = '';
 $email = '';
 $phone = '';
+$city = '';
+$address = '';
 
 if (is_post()) {
     $fullName = trim(
@@ -35,6 +37,20 @@ if (is_post()) {
         )
     );
 
+    $city = trim(
+        (string) (
+            $_POST['city']
+            ?? ''
+        )
+    );
+
+    $address = trim(
+        (string) (
+            $_POST['address']
+            ?? ''
+        )
+    );
+
     $password = (string) (
         $_POST['password']
         ?? ''
@@ -56,8 +72,8 @@ if (is_post()) {
     }
 
     if (
-        strlen($fullName) < 3
-        || strlen($fullName) > 120
+        mb_strlen($fullName) < 3
+        || mb_strlen($fullName) > 120
     ) {
         $errors[] =
             'Full name must be between 3 and 120 characters.';
@@ -74,14 +90,29 @@ if (is_post()) {
     }
 
     if (
-        $phone !== ''
-        && !preg_match(
+        !preg_match(
             '/^[0-9+\-\s()]{7,30}$/',
             $phone
         )
     ) {
         $errors[] =
             'Enter a valid phone number.';
+    }
+
+    if (
+        mb_strlen($city) < 2
+        || mb_strlen($city) > 120
+    ) {
+        $errors[] =
+            'City must be between 2 and 120 characters.';
+    }
+
+    if (
+        mb_strlen($address) < 5
+        || mb_strlen($address) > 1000
+    ) {
+        $errors[] =
+            'Address must be between 5 and 1,000 characters.';
     }
 
     if (strlen($password) < 8) {
@@ -168,6 +199,8 @@ if (is_post()) {
                             'UPDATE users
                              SET full_name = ?,
                                  phone = ?,
+                                 city = ?,
+                                 address = ?,
                                  password = ?,
                                  is_verified = 1,
                                  email_verified_at = NOW(),
@@ -177,11 +210,9 @@ if (is_post()) {
 
                     $updateStatement->execute([
                         $fullName,
-
-                        $phone !== ''
-                            ? $phone
-                            : null,
-
+                        $phone,
+                        $city,
+                        $address,
                         $passwordHash,
                         $userId,
                     ]);
@@ -192,31 +223,24 @@ if (is_post()) {
                                 full_name,
                                 email,
                                 phone,
+                                city,
+                                address,
                                 password,
                                 role,
                                 is_verified,
                                 email_verified_at,
                                 is_active
                              ) VALUES (
-                                ?,
-                                ?,
-                                ?,
-                                ?,
-                                ?,
-                                1,
-                                NOW(),
-                                1
+                                ?, ?, ?, ?, ?, ?, ?, 1, NOW(), 1
                              )'
                         );
 
                     $insertStatement->execute([
                         $fullName,
                         $email,
-
-                        $phone !== ''
-                            ? $phone
-                            : null,
-
+                        $phone,
+                        $city,
+                        $address,
                         $passwordHash,
                         'customer',
                     ]);
@@ -227,11 +251,6 @@ if (is_post()) {
                     );
                 }
 
-                /*
-                 * Close any old registration OTP
-                 * records created before verification
-                 * was removed from customer registration.
-                 */
                 $disableOtpStatement =
                     $connection->prepare(
                         "UPDATE otp_codes
@@ -264,7 +283,7 @@ if (is_post()) {
 
                 set_flash(
                     'success',
-                    'Your customer account has been created successfully. You can now log in.'
+                    'Your customer account has been created successfully. Please log in to continue.'
                 );
 
                 redirect(
@@ -340,12 +359,9 @@ if (is_post()) {
         <?php if ($errors !== []): ?>
 
             <div class="alert alert-danger">
-
                 <ul>
 
-                    <?php foreach (
-                        $errors as $error
-                    ): ?>
+                    <?php foreach ($errors as $error): ?>
 
                         <li>
                             <?= e($error) ?>
@@ -354,7 +370,6 @@ if (is_post()) {
                     <?php endforeach; ?>
 
                 </ul>
-
             </div>
 
         <?php endif; ?>
@@ -369,7 +384,6 @@ if (is_post()) {
             <div class="form-grid">
 
                 <div class="input-box full-width">
-
                     <i class="fa-solid fa-user"></i>
 
                     <input
@@ -382,11 +396,9 @@ if (is_post()) {
                         autocomplete="name"
                         required
                     >
-
                 </div>
 
                 <div class="input-box">
-
                     <i class="fa-solid fa-envelope"></i>
 
                     <input
@@ -399,11 +411,9 @@ if (is_post()) {
                         autocomplete="email"
                         required
                     >
-
                 </div>
 
                 <div class="input-box">
-
                     <i class="fa-solid fa-phone"></i>
 
                     <input
@@ -414,12 +424,41 @@ if (is_post()) {
                         placeholder="Enter Phone Number"
                         maxlength="30"
                         autocomplete="tel"
+                        required
                     >
-
                 </div>
 
                 <div class="input-box">
+                    <i class="fa-solid fa-city"></i>
 
+                    <input
+                        type="text"
+                        id="city"
+                        name="city"
+                        value="<?= e($city) ?>"
+                        placeholder="Enter City"
+                        maxlength="120"
+                        autocomplete="address-level2"
+                        required
+                    >
+                </div>
+
+                <div class="input-box">
+                    <i class="fa-solid fa-location-dot"></i>
+
+                    <input
+                        type="text"
+                        id="address"
+                        name="address"
+                        value="<?= e($address) ?>"
+                        placeholder="Enter Complete Address"
+                        maxlength="1000"
+                        autocomplete="street-address"
+                        required
+                    >
+                </div>
+
+                <div class="input-box">
                     <i class="fa-solid fa-lock"></i>
 
                     <input
@@ -439,11 +478,9 @@ if (is_post()) {
                     >
                         Show
                     </button>
-
                 </div>
 
                 <div class="input-box">
-
                     <i class="fa-solid fa-lock"></i>
 
                     <input
@@ -463,7 +500,6 @@ if (is_post()) {
                     >
                         Show
                     </button>
-
                 </div>
 
             </div>
@@ -493,11 +529,7 @@ if (is_post()) {
 
             <br>
 
-            <a
-                href="<?= e(
-                    url('/')
-                ) ?>"
-            >
+            <a href="<?= e(url('/')) ?>">
                 Return to Website
             </a>
 
