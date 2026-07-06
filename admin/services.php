@@ -13,23 +13,59 @@ $adminId = (int) $_SESSION['user_id'];
 $errors = [];
 $flash = get_flash();
 
+$allowedTypes = [
+    'catering',
+    'music',
+];
+
 $editId = max(
     0,
     (int) ($_GET['edit'] ?? 0)
 );
 
 $editingService = null;
+$activePanel = 'catering';
 
 $formValues = [
+    'service_type' => 'catering',
     'name' => '',
+    'category' => '',
     'description' => '',
     'price' => '',
     'status' => 'active',
 ];
 
+/**
+ * Return the correct page section.
+ */
+function service_panel_anchor(
+    string $type
+): string {
+    return $type === 'music'
+        ? '#music-panel'
+        : '#catering-panel';
+}
+
+/**
+ * Format service price.
+ */
+function service_price_label(
+    float $price
+): string {
+    $decimalPlaces =
+        floor($price) === $price
+            ? 0
+            : 2;
+
+    return 'Rs. ' . number_format(
+        $price,
+        $decimalPlaces
+    );
+}
+
 /*
 |--------------------------------------------------------------------------
-| Load administrator information
+| Load administrator details
 |--------------------------------------------------------------------------
 */
 
@@ -55,7 +91,9 @@ if (!$admin) {
     redirect('/auth/logout.php');
 }
 
-$adminImage = !empty($admin['profile_image'])
+$adminImage = !empty(
+    $admin['profile_image']
+)
     ? url(
         '/'
         . ltrim(
@@ -67,7 +105,7 @@ $adminImage = !empty($admin['profile_image'])
 
 /*
 |--------------------------------------------------------------------------
-| Unread notification count
+| Unread notifications
 |--------------------------------------------------------------------------
 */
 
@@ -78,7 +116,9 @@ $unreadStatement = $connection->prepare(
      AND is_read = 0'
 );
 
-$unreadStatement->execute([$adminId]);
+$unreadStatement->execute([
+    $adminId,
+]);
 
 $unreadNotifications = (int) (
     $unreadStatement->fetchColumn()
@@ -92,14 +132,39 @@ $unreadNotifications = (int) (
 
 if (is_post()) {
     $submittedToken = (string) (
-        $_POST['csrf_token'] ?? ''
+        $_POST['csrf_token']
+        ?? ''
     );
 
     $action = (string) (
-        $_POST['action'] ?? ''
+        $_POST['action']
+        ?? ''
     );
 
-    if (!verify_csrf($submittedToken)) {
+    $postedType = strtolower(
+        trim(
+            (string) (
+                $_POST['service_type']
+                ?? 'catering'
+            )
+        )
+    );
+
+    if (
+        in_array(
+            $postedType,
+            $allowedTypes,
+            true
+        )
+    ) {
+        $activePanel = $postedType;
+    }
+
+    if (
+        !verify_csrf(
+            $submittedToken
+        )
+    ) {
         $errors[] =
             'Your form session expired. Refresh the page and try again.';
     }
@@ -110,19 +175,29 @@ if (is_post()) {
     |--------------------------------------------------------------------------
     */
 
-    if ($action === 'delete' && $errors === []) {
+    if (
+        $action === 'delete'
+        && $errors === []
+    ) {
         $serviceId = (int) (
-            $_POST['service_id'] ?? 0
+            $_POST['service_id']
+            ?? 0
         );
 
-        $serviceStatement = $connection->prepare(
-            'SELECT id, name
-             FROM services
-             WHERE id = ?
-             LIMIT 1'
-        );
+        $serviceStatement =
+            $connection->prepare(
+                'SELECT
+                    id,
+                    name,
+                    service_type
+                 FROM services
+                 WHERE id = ?
+                 LIMIT 1'
+            );
 
-        $serviceStatement->execute([$serviceId]);
+        $serviceStatement->execute([
+            $serviceId,
+        ]);
 
         $serviceToDelete =
             $serviceStatement->fetch();
@@ -133,58 +208,87 @@ if (is_post()) {
                 'The selected service was not found.'
             );
 
-            redirect('/admin/services.php');
+            redirect(
+                '/admin/services.php'
+            );
         }
 
-        $usageStatement = $connection->prepare(
-            'SELECT COUNT(*)
-             FROM booking_services
-             WHERE service_id = ?'
+        $serviceType = (string) (
+            $serviceToDelete[
+                'service_type'
+            ]
+            ?? 'catering'
         );
 
-        $usageStatement->execute([$serviceId]);
-
-        $serviceUsageCount = (int) (
-            $usageStatement->fetchColumn()
-        );
-
-        if ($serviceUsageCount > 0) {
-            set_flash(
-                'error',
-                'This service is already connected to one or more bookings. Deactivate it instead of deleting it.'
+        $usageStatement =
+            $connection->prepare(
+                'SELECT COUNT(*)
+                 FROM booking_services
+                 WHERE service_id = ?'
             );
 
-            redirect('/admin/services.php');
+        $usageStatement->execute([
+            $serviceId,
+        ]);
+
+        $usageCount = (int) (
+            $usageStatement
+                ->fetchColumn()
+        );
+
+        if ($usageCount > 0) {
+            set_flash(
+                'error',
+                'This item is already connected to a booking. Turn off Active on Customer Website instead of deleting it.'
+            );
+
+            redirect(
+                '/admin/services.php'
+                . service_panel_anchor(
+                    $serviceType
+                )
+            );
         }
 
         try {
-            $deleteStatement = $connection->prepare(
-                'DELETE FROM services
-                 WHERE id = ?'
-            );
+            $deleteStatement =
+                $connection->prepare(
+                    'DELETE FROM services
+                     WHERE id = ?'
+                );
 
-            $deleteStatement->execute([$serviceId]);
+            $deleteStatement->execute([
+                $serviceId,
+            ]);
 
             set_flash(
                 'success',
-                'Service deleted successfully.'
+                $serviceType === 'music'
+                    ? 'Music service deleted successfully.'
+                    : 'Catering item deleted successfully.'
             );
         } catch (Throwable $exception) {
             set_flash(
                 'error',
                 APP_DEBUG
-                    ? 'Service deletion failed: '
-                        . $exception->getMessage()
-                    : 'Service deletion failed.'
+                    ? 'Deletion failed: '
+                        . $exception
+                            ->getMessage()
+                    : 'The selected item could not be deleted.'
             );
         }
 
-        redirect('/admin/services.php');
+        redirect(
+            '/admin/services.php'
+            . service_panel_anchor(
+                $serviceType
+            )
+        );
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Activate or deactivate service
+    | Activate or hide on customer website
     |--------------------------------------------------------------------------
     */
 
@@ -193,32 +297,48 @@ if (is_post()) {
         && $errors === []
     ) {
         $serviceId = (int) (
-            $_POST['service_id'] ?? 0
+            $_POST['service_id']
+            ?? 0
         );
 
-        $statusStatement = $connection->prepare(
-            'SELECT status
-             FROM services
-             WHERE id = ?
-             LIMIT 1'
-        );
+        $statusStatement =
+            $connection->prepare(
+                'SELECT
+                    status,
+                    service_type
+                 FROM services
+                 WHERE id = ?
+                 LIMIT 1'
+            );
 
-        $statusStatement->execute([$serviceId]);
+        $statusStatement->execute([
+            $serviceId,
+        ]);
 
-        $currentStatus =
-            $statusStatement->fetchColumn();
+        $serviceStatus =
+            $statusStatement->fetch();
 
-        if ($currentStatus === false) {
+        if (!$serviceStatus) {
             set_flash(
                 'error',
                 'The selected service was not found.'
             );
 
-            redirect('/admin/services.php');
+            redirect(
+                '/admin/services.php'
+            );
         }
 
+        $serviceType = (string) (
+            $serviceStatus[
+                'service_type'
+            ]
+            ?? 'catering'
+        );
+
         $newStatus =
-            $currentStatus === 'active'
+            $serviceStatus['status']
+            === 'active'
                 ? 'inactive'
                 : 'active';
 
@@ -237,11 +357,16 @@ if (is_post()) {
         set_flash(
             'success',
             $newStatus === 'active'
-                ? 'Service activated successfully.'
-                : 'Service deactivated successfully.'
+                ? 'The item is now active on the customer website.'
+                : 'The item has been hidden from the customer website.'
         );
 
-        redirect('/admin/services.php');
+        redirect(
+            '/admin/services.php'
+            . service_panel_anchor(
+                $serviceType
+            )
+        );
     }
 
     /*
@@ -253,17 +378,193 @@ if (is_post()) {
     if (
         in_array(
             $action,
-            ['create', 'update'],
+            [
+                'create',
+                'update',
+            ],
             true
         )
     ) {
         $serviceId = (int) (
-            $_POST['service_id'] ?? 0
+            $_POST['service_id']
+            ?? 0
         );
 
-        $existingService = null;
+        $serviceType = strtolower(
+            trim(
+                (string) (
+                    $_POST['service_type']
+                    ?? ''
+                )
+            )
+        );
 
-        if ($action === 'update') {
+        $name = trim(
+            (string) (
+                $_POST['name']
+                ?? ''
+            )
+        );
+
+        $category = trim(
+            (string) (
+                $_POST['category']
+                ?? ''
+            )
+        );
+
+        $description = trim(
+            (string) (
+                $_POST['description']
+                ?? ''
+            )
+        );
+
+        $priceInput = trim(
+            (string) (
+                $_POST['price']
+                ?? ''
+            )
+        );
+
+        $priceClean = preg_replace(
+            '/[^0-9.]/',
+            '',
+            $priceInput
+        );
+
+        $status =
+            isset(
+                $_POST[
+                    'active_on_website'
+                ]
+            )
+                ? 'active'
+                : 'inactive';
+
+        if (
+            in_array(
+                $serviceType,
+                $allowedTypes,
+                true
+            )
+        ) {
+            $activePanel =
+                $serviceType;
+        }
+
+        if (
+            $serviceType
+            === 'music'
+        ) {
+            $category =
+                'Music Service';
+        }
+
+        $formValues = [
+            'service_type' =>
+                $serviceType,
+
+            'name' =>
+                $name,
+
+            'category' =>
+                $category,
+
+            'description' =>
+                $description,
+
+            'price' =>
+                $priceInput,
+
+            'status' =>
+                $status,
+        ];
+
+        if (
+            !in_array(
+                $serviceType,
+                $allowedTypes,
+                true
+            )
+        ) {
+            $errors[] =
+                'Choose a valid service section.';
+        }
+
+        if (
+            mb_strlen($name) < 2
+            || mb_strlen($name) > 150
+        ) {
+            $errors[] =
+                $serviceType === 'music'
+                    ? 'Music service name must contain between 2 and 150 characters.'
+                    : 'Catering item name must contain between 2 and 150 characters.';
+        }
+
+        if (
+            $serviceType
+            === 'catering'
+            && (
+                mb_strlen(
+                    $category
+                ) < 2
+                || mb_strlen(
+                    $category
+                ) > 100
+            )
+        ) {
+            $errors[] =
+                'Catering category must contain between 2 and 100 characters.';
+        }
+
+        if (
+            $serviceType
+            === 'music'
+            && (
+                mb_strlen(
+                    $description
+                ) < 5
+                || mb_strlen(
+                    $description
+                ) > 1000
+            )
+        ) {
+            $errors[] =
+                'Music service details must contain between 5 and 1,000 characters.';
+        }
+
+        if (
+            $description !== ''
+            && mb_strlen(
+                $description
+            ) > 1000
+        ) {
+            $errors[] =
+                'Description cannot contain more than 1,000 characters.';
+        }
+
+        if (
+            $priceClean === null
+            || $priceClean === ''
+            || !is_numeric(
+                $priceClean
+            )
+            || (float) $priceClean < 0
+        ) {
+            $errors[] =
+                $serviceType === 'music'
+                    ? 'Enter a valid fixed music price.'
+                    : 'Enter a valid per-head catering price.';
+        }
+
+        /*
+         * Validate record being edited.
+         */
+        if (
+            $action === 'update'
+            && $errors === []
+        ) {
             $existingStatement =
                 $connection->prepare(
                     'SELECT *
@@ -277,116 +578,102 @@ if (is_post()) {
             ]);
 
             $existingService =
-                $existingStatement->fetch();
+                $existingStatement
+                    ->fetch();
 
             if (!$existingService) {
                 $errors[] =
-                    'The service being edited was not found.';
+                    'The item being edited was not found.';
+            } elseif (
+                (string) $existingService[
+                    'service_type'
+                ]
+                !== $serviceType
+            ) {
+                $errors[] =
+                    'The service type cannot be changed while editing.';
             } else {
-                $editId = $serviceId;
-                $editingService = $existingService;
+                $editId =
+                    $serviceId;
+
+                $editingService =
+                    $existingService;
             }
         }
 
-        $name = trim(
-            (string) ($_POST['name'] ?? '')
-        );
-
-        $description = trim(
-            (string) (
-                $_POST['description'] ?? ''
-            )
-        );
-
-        $priceInput = trim(
-            (string) ($_POST['price'] ?? '')
-        );
-
-        $priceClean = preg_replace(
-            '/[^0-9.]/',
-            '',
-            $priceInput
-        );
-
-        $status =
-            isset($_POST['activate_service'])
-                ? 'active'
-                : 'inactive';
-
-        $formValues = [
-            'name' => $name,
-            'description' => $description,
-            'price' => $priceInput,
-            'status' => $status,
-        ];
-
-        if (
-            mb_strlen($name) < 3
-            || mb_strlen($name) > 150
-        ) {
-            $errors[] =
-                'Service name must contain between 3 and 150 characters.';
-        }
-
-        if (
-            mb_strlen($description) < 5
-            || mb_strlen($description) > 2000
-        ) {
-            $errors[] =
-                'Service description must contain between 5 and 2,000 characters.';
-        }
-
-        if (
-            $priceClean === null
-            || $priceClean === ''
-            || !is_numeric($priceClean)
-            || (float) $priceClean < 0
-        ) {
-            $errors[] =
-                'Enter a valid service price.';
-        }
-
         /*
-         * Ensure service name is unique.
+         * Name must be unique inside its own section.
          */
         if ($errors === []) {
             $nameCheckStatement =
                 $connection->prepare(
                     'SELECT id
                      FROM services
-                     WHERE LOWER(name) = LOWER(?)
+                     WHERE service_type = ?
+                     AND LOWER(name) = LOWER(?)
                      AND id <> ?
                      LIMIT 1'
                 );
 
             $nameCheckStatement->execute([
+                $serviceType,
                 $name,
                 $serviceId,
             ]);
 
-            if ($nameCheckStatement->fetch()) {
+            if (
+                $nameCheckStatement
+                    ->fetch()
+            ) {
                 $errors[] =
-                    'Another service already uses this name.';
+                    $serviceType === 'music'
+                        ? 'Another music service already uses this name.'
+                        : 'Another catering item already uses this name.';
             }
         }
 
+        /*
+         * Save item.
+         */
         if ($errors === []) {
             try {
-                if ($action === 'create') {
+                if (
+                    $action
+                    === 'create'
+                ) {
                     $saveStatement =
                         $connection->prepare(
                             'INSERT INTO services (
+                                service_type,
                                 name,
+                                category,
                                 description,
                                 price,
                                 status,
                                 created_by
-                             ) VALUES (?, ?, ?, ?, ?)'
+                             ) VALUES (
+                                ?,
+                                ?,
+                                ?,
+                                ?,
+                                ?,
+                                ?,
+                                ?
+                             )'
                         );
 
                     $saveStatement->execute([
+                        $serviceType,
                         $name,
-                        $description,
+
+                        $category !== ''
+                            ? $category
+                            : null,
+
+                        $description !== ''
+                            ? $description
+                            : null,
+
                         (float) $priceClean,
                         $status,
                         $adminId,
@@ -396,34 +683,62 @@ if (is_post()) {
                         $connection->prepare(
                             'UPDATE services
                              SET name = ?,
+                                 category = ?,
                                  description = ?,
                                  price = ?,
                                  status = ?
-                             WHERE id = ?'
+                             WHERE id = ?
+                             AND service_type = ?'
                         );
 
                     $saveStatement->execute([
                         $name,
-                        $description,
+
+                        $category !== ''
+                            ? $category
+                            : null,
+
+                        $description !== ''
+                            ? $description
+                            : null,
+
                         (float) $priceClean,
                         $status,
                         $serviceId,
+                        $serviceType,
                     ]);
                 }
 
                 set_flash(
                     'success',
                     $action === 'create'
-                        ? 'Service created successfully.'
-                        : 'Service updated successfully.'
+                        ? (
+                            $serviceType
+                            === 'music'
+                                ? 'Music service added successfully.'
+                                : 'Catering item added successfully.'
+                        )
+                        : (
+                            $serviceType
+                            === 'music'
+                                ? 'Music service updated successfully.'
+                                : 'Catering item updated successfully.'
+                        )
                 );
 
-                redirect('/admin/services.php');
+                redirect(
+                    '/admin/services.php'
+                    . service_panel_anchor(
+                        $serviceType
+                    )
+                );
             } catch (Throwable $exception) {
-                $errors[] = APP_DEBUG
-                    ? 'Service could not be saved: '
-                        . $exception->getMessage()
-                    : 'Service could not be saved.';
+                $errors[] =
+                    APP_DEBUG
+                        ? 'The item could not be saved: '
+                            . $exception
+                                ->getMessage()
+                        : 'The item could not be saved.';
             }
         }
     }
@@ -431,21 +746,33 @@ if (is_post()) {
 
 /*
 |--------------------------------------------------------------------------
-| Load service for editing
+| Load item for editing
 |--------------------------------------------------------------------------
 */
 
-if ($editId > 0 && $editingService === null) {
-    $editStatement = $connection->prepare(
-        'SELECT *
-         FROM services
-         WHERE id = ?
-         LIMIT 1'
-    );
+if (
+    $editId > 0
+    && $editingService === null
+) {
+    $editStatement =
+        $connection->prepare(
+            "SELECT *
+             FROM services
+             WHERE id = ?
+             AND service_type
+                IN (
+                    'catering',
+                    'music'
+                )
+             LIMIT 1"
+        );
 
-    $editStatement->execute([$editId]);
+    $editStatement->execute([
+        $editId,
+    ]);
 
-    $editingService = $editStatement->fetch();
+    $editingService =
+        $editStatement->fetch();
 
     if (!$editingService) {
         set_flash(
@@ -453,15 +780,30 @@ if ($editId > 0 && $editingService === null) {
             'The selected service was not found.'
         );
 
-        redirect('/admin/services.php');
+        redirect(
+            '/admin/services.php'
+        );
     }
+
+    $activePanel = (string) (
+        $editingService[
+            'service_type'
+        ]
+        ?? 'catering'
+    );
 }
 
 $isServiceFormPost =
     is_post()
     && in_array(
-        (string) ($_POST['action'] ?? ''),
-        ['create', 'update'],
+        (string) (
+            $_POST['action']
+            ?? ''
+        ),
+        [
+            'create',
+            'update',
+        ],
         true
     );
 
@@ -470,83 +812,174 @@ if (
     && !$isServiceFormPost
 ) {
     $formValues = [
+        'service_type' =>
+            (string) $editingService[
+                'service_type'
+            ],
+
         'name' =>
-            (string) $editingService['name'],
+            (string) $editingService[
+                'name'
+            ],
+
+        'category' =>
+            (string) (
+                $editingService[
+                    'category'
+                ]
+                ?? ''
+            ),
 
         'description' =>
             (string) (
-                $editingService['description']
+                $editingService[
+                    'description'
+                ]
                 ?? ''
             ),
 
         'price' =>
-            (string) $editingService['price'],
+            (string) $editingService[
+                'price'
+            ],
 
         'status' =>
-            (string) $editingService['status'],
+            (string) $editingService[
+                'status'
+            ],
     ];
 }
 
 /*
 |--------------------------------------------------------------------------
-| Dashboard statistics
+| Statistics
 |--------------------------------------------------------------------------
 */
 
-$totalServices = (int) $connection
+$statistics = $connection
     ->query(
-        'SELECT COUNT(*)
-         FROM services'
-    )
-    ->fetchColumn();
+        "SELECT
+            SUM(
+                service_type
+                = 'catering'
+            ) AS catering_total,
 
-$activeServices = (int) $connection
-    ->query(
-        "SELECT COUNT(*)
-         FROM services
-         WHERE status = 'active'"
-    )
-    ->fetchColumn();
+            SUM(
+                service_type
+                = 'catering'
+                AND status
+                = 'active'
+            ) AS catering_active,
 
-$totalServiceSelections = (int) $connection
-    ->query(
-        'SELECT COALESCE(SUM(quantity), 0)
-         FROM booking_services'
-    )
-    ->fetchColumn();
+            SUM(
+                service_type
+                = 'music'
+            ) AS music_total,
 
-$totalServiceValue = (float) $connection
-    ->query(
-        'SELECT COALESCE(
-            SUM(quantity * price),
-            0
-         )
-         FROM booking_services'
+            SUM(
+                service_type
+                = 'music'
+                AND status
+                = 'active'
+            ) AS music_active
+         FROM services"
     )
-    ->fetchColumn();
+    ->fetch();
+
+$cateringTotal = (int) (
+    $statistics[
+        'catering_total'
+    ]
+    ?? 0
+);
+
+$cateringActive = (int) (
+    $statistics[
+        'catering_active'
+    ]
+    ?? 0
+);
+
+$musicTotal = (int) (
+    $statistics[
+        'music_total'
+    ]
+    ?? 0
+);
+
+$musicActive = (int) (
+    $statistics[
+        'music_active'
+    ]
+    ?? 0
+);
 
 /*
 |--------------------------------------------------------------------------
-| Load services
+| Load catering and music records
 |--------------------------------------------------------------------------
 */
 
-$services = $connection
+$serviceRows = $connection
     ->query(
-        'SELECT
+        "SELECT
             services.*,
+
             COALESCE(
-                SUM(booking_services.quantity),
+                SUM(
+                    booking_services
+                        .quantity
+                ),
                 0
             ) AS booking_count
+
          FROM services
+
          LEFT JOIN booking_services
-            ON booking_services.service_id =
-               services.id
+            ON booking_services
+                .service_id
+            = services.id
+
+         WHERE services
+            .service_type
+            IN (
+                'catering',
+                'music'
+            )
+
          GROUP BY services.id
-         ORDER BY services.created_at DESC'
+
+         ORDER BY
+            services
+                .service_type ASC,
+            services
+                .created_at DESC"
     )
     ->fetchAll();
+
+$cateringServices = [];
+$musicServices = [];
+
+foreach (
+    $serviceRows
+    as $serviceRow
+) {
+    if (
+        (
+            $serviceRow[
+                'service_type'
+            ]
+            ?? ''
+        )
+        === 'music'
+    ) {
+        $musicServices[] =
+            $serviceRow;
+    } else {
+        $cateringServices[] =
+            $serviceRow;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -572,19 +1005,28 @@ $services = $connection
     <link
         rel="stylesheet"
         href="<?= e(
-            url('/assets/css/admin_dashboard.css')
+            url(
+                '/assets/css/admin_dashboard.css'
+            )
         ) ?>"
     >
 
     <link
         rel="stylesheet"
         href="<?= e(
-            url('/assets/css/service_management.css')
+            url(
+                '/assets/css/service_management.css'
+            )
         ) ?>"
     >
 </head>
 
-<body class="admin-dashboard-page">
+<body
+    class="admin-dashboard-page service-management-page"
+    data-initial-service-panel="<?= e(
+        $activePanel
+    ) ?>"
+>
 
     <aside
         class="admin-sidebar"
@@ -597,124 +1039,156 @@ $services = $connection
         </div>
 
         <div class="admin-profile">
+
             <img
                 src="<?= e($adminImage) ?>"
                 alt="Administrator profile"
             >
 
-            <h2><?= e($admin['full_name']) ?></h2>
+            <h2>
+                <?= e(
+                    (string) $admin[
+                        'full_name'
+                    ]
+                ) ?>
+            </h2>
 
-            <p>System Administrator</p>
+            <p>
+                System Administrator
+            </p>
 
             <div class="online-status">
                 ● Online
             </div>
+
         </div>
 
-<nav class="admin-menu">
+        <nav class="admin-menu">
 
-    <a
-        href="<?= e(
-            url('/admin/dashboard.php')
-        ) ?>"
-    >
-        <i class="fa-solid fa-house"></i>
-        Dashboard
-    </a>
+            <a
+                href="<?= e(
+                    url(
+                        '/admin/dashboard.php'
+                    )
+                ) ?>"
+            >
+                <i class="fa-solid fa-house"></i>
+                Dashboard
+            </a>
 
-    <a
-        href="<?= e(
-            url('/admin/bookings.php')
-        ) ?>"
-    >
-        <i class="fa-solid fa-calendar-check"></i>
-        Manage Bookings
-    </a>
+            <a
+                href="<?= e(
+                    url(
+                        '/admin/bookings.php'
+                    )
+                ) ?>"
+            >
+                <i class="fa-solid fa-calendar-check"></i>
+                Manage Bookings
+            </a>
 
-    <a
-        href="<?= e(
-            url('/admin/packages.php')
-        ) ?>"
-    >
-        <i class="fa-solid fa-gift"></i>
-        Manage Packages
-    </a>
+            <a
+                href="<?= e(
+                    url(
+                        '/admin/packages.php'
+                    )
+                ) ?>"
+            >
+                <i class="fa-solid fa-gift"></i>
+                Manage Packages
+            </a>
 
-    <a
-        href="<?= e(
-            url('/admin/venues.php')
-        ) ?>"
-    >
-        <i class="fa-solid fa-hotel"></i>
-        Manage Venues
-    </a>
+            <a
+                href="<?= e(
+                    url(
+                        '/admin/venues.php'
+                    )
+                ) ?>"
+            >
+                <i class="fa-solid fa-hotel"></i>
+                Manage Venues
+            </a>
 
-    <a
-        class="active"
-        href="<?= e(
-            url('/admin/services.php')
-        ) ?>"
-    >
-        <i class="fa-solid fa-bell-concierge"></i>
-        Manage Services
-    </a>
+            <a
+                class="active"
+                href="<?= e(
+                    url(
+                        '/admin/services.php'
+                    )
+                ) ?>"
+            >
+                <i class="fa-solid fa-bell-concierge"></i>
+                Manage Services
+            </a>
 
-    <a
-        href="<?= e(
-            url('/admin/gallery.php')
-        ) ?>"
-    >
-        <i class="fa-solid fa-images"></i>
-        View Gallery
-    </a>
+            <a
+                href="<?= e(
+                    url(
+                        '/admin/gallery.php'
+                    )
+                ) ?>"
+            >
+                <i class="fa-solid fa-images"></i>
+                View Gallery
+            </a>
 
-    <a
-        href="<?= e(
-            url('/admin/feedback.php')
-        ) ?>"
-    >
-        <i class="fa-solid fa-comment-dots"></i>
-        View Feedback
-    </a>
+            <a
+                href="<?= e(
+                    url(
+                        '/admin/feedback.php'
+                    )
+                ) ?>"
+            >
+                <i class="fa-solid fa-comment-dots"></i>
+                View Feedback
+            </a>
 
-    <a
-        href="<?= e(
-            url('/admin/staff.php')
-        ) ?>"
-    >
-        <i class="fa-solid fa-users-gear"></i>
-        Manage Staff
-    </a>
+            <a
+                href="<?= e(
+                    url(
+                        '/admin/staff.php'
+                    )
+                ) ?>"
+            >
+                <i class="fa-solid fa-users-gear"></i>
+                Manage Staff
+            </a>
 
-    <a
-        href="<?= e(
-            url('/admin/notifications.php')
-        ) ?>"
-    >
-        <i class="fa-solid fa-bell"></i>
-        Notifications
-    </a>
+            <a
+                href="<?= e(
+                    url(
+                        '/admin/notifications.php'
+                    )
+                ) ?>"
+            >
+                <i class="fa-solid fa-bell"></i>
+                Notifications
+            </a>
 
-    <a
-        href="<?= e(
-            url('/admin/profile.php')
-        ) ?>"
-    >
-        <i class="fa-solid fa-user"></i>
-        Manage Profile
-    </a>
+            <a
+                href="<?= e(
+                    url(
+                        '/admin/profile.php'
+                    )
+                ) ?>"
+            >
+                <i class="fa-solid fa-user"></i>
+                Manage Profile
+            </a>
 
-    <a
-        class="logout-link"
-        href="<?= e(
-            url('/auth/logout.php')
-        ) ?>"
-    >
-        <i class="fa-solid fa-right-from-bracket"></i>
-        Logout
-    </a>
+            <a
+                class="logout-link"
+                href="<?= e(
+                    url(
+                        '/auth/logout.php'
+                    )
+                ) ?>"
+            >
+                <i class="fa-solid fa-right-from-bracket"></i>
+                Logout
+            </a>
 
-</nav>
+        </nav>
 
     </aside>
 
@@ -739,12 +1213,16 @@ $services = $connection
                 </button>
 
                 <div class="admin-welcome">
-                    <h1>Manage Services</h1>
+
+                    <h1>
+                        Manage Services
+                    </h1>
 
                     <p>
-                        Create and manage additional
-                        wedding-event services.
+                        Manage customer-visible catering
+                        menu items and music services.
                     </p>
+
                 </div>
 
             </div>
@@ -754,16 +1232,22 @@ $services = $connection
                 <a
                     class="notification-link"
                     href="<?= e(
-                        url('/admin/notifications.php')
+                        url(
+                            '/admin/notifications.php'
+                        )
                     ) ?>"
                     aria-label="Open notifications"
                 >
                     <i class="fa-regular fa-bell"></i>
 
-                    <?php if ($unreadNotifications > 0): ?>
+                    <?php if (
+                        $unreadNotifications
+                        > 0
+                    ): ?>
                         <span>
                             <?= e(
-                                $unreadNotifications > 99
+                                $unreadNotifications
+                                > 99
                                     ? '99+'
                                     : (string) $unreadNotifications
                             ) ?>
@@ -771,10 +1255,18 @@ $services = $connection
                     <?php endif; ?>
                 </a>
 
-                <a href="<?= e(url('/admin/profile.php')) ?>">
+                <a
+                    href="<?= e(
+                        url(
+                            '/admin/profile.php'
+                        )
+                    ) ?>"
+                >
                     <img
                         class="topbar-profile-image"
-                        src="<?= e($adminImage) ?>"
+                        src="<?= e(
+                            $adminImage
+                        ) ?>"
                         alt="Administrator profile"
                     >
                 </a>
@@ -784,494 +1276,1207 @@ $services = $connection
         </header>
 
         <?php if ($flash): ?>
+
             <div
                 class="service-alert <?= $flash['type'] === 'success'
                     ? 'service-alert-success'
                     : 'service-alert-danger' ?>"
             >
-                <?= e($flash['message']) ?>
+                <?= e(
+                    $flash['message']
+                ) ?>
             </div>
+
         <?php endif; ?>
 
-        <?php if ($errors !== []): ?>
+        <?php if (
+            $errors !== []
+        ): ?>
+
             <div
                 class="service-alert service-alert-danger"
             >
                 <ul>
-                    <?php foreach ($errors as $error): ?>
-                        <li><?= e($error) ?></li>
+                    <?php foreach (
+                        $errors as $error
+                    ): ?>
+                        <li>
+                            <?= e($error) ?>
+                        </li>
                     <?php endforeach; ?>
                 </ul>
             </div>
+
         <?php endif; ?>
 
-        <section class="summary-cards">
+        <section class="service-summary-grid">
 
-            <article class="summary-card">
-                <div class="summary-icon pink">
-                    <i class="fa-solid fa-bell-concierge"></i>
-                </div>
+            <article class="service-summary-card">
 
-                <div>
-                    <h4>Total Services</h4>
-
-                    <h2>
-                        <?= e((string) $totalServices) ?>
-                    </h2>
-
-                    <p>All created services</p>
-                </div>
-            </article>
-
-            <article class="summary-card">
-                <div class="summary-icon purple">
-                    <i class="fa-solid fa-eye"></i>
-                </div>
-
-                <div>
-                    <h4>Active Services</h4>
-
-                    <h2>
-                        <?= e((string) $activeServices) ?>
-                    </h2>
-
-                    <p>Available for selection</p>
-                </div>
-            </article>
-
-            <article class="summary-card">
-                <div class="summary-icon orange">
-                    <i class="fa-solid fa-cart-plus"></i>
-                </div>
-
-                <div>
-                    <h4>Service Selections</h4>
-
-                    <h2>
-                        <?= e(
-                            (string) $totalServiceSelections
-                        ) ?>
-                    </h2>
-
-                    <p>Services added to bookings</p>
-                </div>
-            </article>
-
-            <article class="summary-card">
-                <div class="summary-icon blue">
-                    <i class="fa-solid fa-money-bill-wave"></i>
-                </div>
-
-                <div>
-                    <h4>Service Value</h4>
-
-                    <h2>
-                        Rs.
-                        <?= e(
-                            number_format(
-                                $totalServiceValue,
-                                0
-                            )
-                        ) ?>
-                    </h2>
-
-                    <p>Total booking-service value</p>
-                </div>
-            </article>
-
-        </section>
-
-        <section class="service-section-box">
-
-            <div class="service-section-heading">
-
-                <div>
-                    <h2>Wedding Services</h2>
-
-                    <p>
-                        View service pricing, availability
-                        and booking usage.
-                    </p>
-                </div>
-
-                <a
-                    class="service-add-button"
-                    href="#serviceForm"
+                <div
+                    class="service-summary-icon catering"
                 >
-                    Add New Service
-                </a>
+                    <i class="fa-solid fa-utensils"></i>
+                </div>
 
-            </div>
+                <div>
+                    <span>
+                        Catering Items
+                    </span>
 
-            <?php if ($services === []): ?>
+                    <strong>
+                        <?= e(
+                            (string) $cateringTotal
+                        ) ?>
+                    </strong>
 
-                <div class="service-empty-state">
+                    <small>
+                        <?= e(
+                            (string) $cateringActive
+                        ) ?>
+                        active on website
+                    </small>
+                </div>
 
-                    <i class="fa-solid fa-bell-concierge"></i>
+            </article>
 
-                    <h3>No services created yet</h3>
+            <article class="service-summary-card">
+
+                <div
+                    class="service-summary-icon music"
+                >
+                    <i class="fa-solid fa-music"></i>
+                </div>
+
+                <div>
+                    <span>
+                        Music Services
+                    </span>
+
+                    <strong>
+                        <?= e(
+                            (string) $musicTotal
+                        ) ?>
+                    </strong>
+
+                    <small>
+                        <?= e(
+                            (string) $musicActive
+                        ) ?>
+                        active on website
+                    </small>
+                </div>
+
+            </article>
+
+            <article class="service-summary-note">
+
+                <i class="fa-solid fa-circle-info"></i>
+
+                <div>
+                    <strong>
+                        Customer website visibility
+                    </strong>
 
                     <p>
-                        Use the form below to create the
-                        first wedding-event service.
+                        Turn on Active on Customer Website
+                        only for items customers should see
+                        and select during booking.
                     </p>
-
                 </div>
 
-            <?php else: ?>
-
-                <div class="service-grid">
-
-                    <?php foreach ($services as $service): ?>
-
-                        <article class="service-card">
-
-                            <div class="service-card-header">
-
-                                <div class="service-icon">
-                                    <i
-                                        class="fa-solid fa-bell-concierge"
-                                    ></i>
-                                </div>
-
-                                <span
-                                    class="service-status <?= e(
-                                        (string) $service['status']
-                                    ) ?>"
-                                >
-                                    <?= e(
-                                        (string) $service['status']
-                                    ) ?>
-                                </span>
-
-                            </div>
-
-                            <h3>
-                                <?= e(
-                                    (string) $service['name']
-                                ) ?>
-                            </h3>
-
-                            <div class="service-price">
-                                Rs.
-                                <?= e(
-                                    number_format(
-                                        (float) $service['price'],
-                                        0
-                                    )
-                                ) ?>
-                            </div>
-
-                            <p class="service-description">
-                                <?= e(
-                                    (string) (
-                                        $service['description']
-                                        ?? ''
-                                    )
-                                ) ?>
-                            </p>
-
-                            <div class="service-meta">
-                                Selected in bookings:
-                                <strong>
-                                    <?= e(
-                                        (string) $service[
-                                            'booking_count'
-                                        ]
-                                    ) ?>
-                                </strong>
-
-                                <br>
-
-                                Created:
-                                <strong>
-                                    <?= e(
-                                        date(
-                                            'd M Y',
-                                            strtotime(
-                                                (string) $service[
-                                                    'created_at'
-                                                ]
-                                            )
-                                        )
-                                    ) ?>
-                                </strong>
-                            </div>
-
-                            <div class="service-actions">
-
-                                <a
-                                    class="service-edit-button"
-                                    href="<?= e(
-                                        url(
-                                            '/admin/services.php?edit='
-                                            . (int) $service['id']
-                                            . '#serviceForm'
-                                        )
-                                    ) ?>"
-                                >
-                                    Edit
-                                </a>
-
-                                <form method="post">
-
-                                    <?= csrf_field() ?>
-
-                                    <input
-                                        type="hidden"
-                                        name="action"
-                                        value="toggle_status"
-                                    >
-
-                                    <input
-                                        type="hidden"
-                                        name="service_id"
-                                        value="<?= e(
-                                            (string) $service['id']
-                                        ) ?>"
-                                    >
-
-                                    <button
-                                        class="service-status-button"
-                                        type="submit"
-                                    >
-                                        <?= $service['status']
-                                            === 'active'
-                                            ? 'Deactivate'
-                                            : 'Activate' ?>
-                                    </button>
-
-                                </form>
-
-                                <form
-                                    method="post"
-                                    onsubmit="return confirm('Delete this service permanently?');"
-                                >
-
-                                    <?= csrf_field() ?>
-
-                                    <input
-                                        type="hidden"
-                                        name="action"
-                                        value="delete"
-                                    >
-
-                                    <input
-                                        type="hidden"
-                                        name="service_id"
-                                        value="<?= e(
-                                            (string) $service['id']
-                                        ) ?>"
-                                    >
-
-                                    <button
-                                        class="service-delete-button"
-                                        type="submit"
-                                    >
-                                        Delete
-                                    </button>
-
-                                </form>
-
-                            </div>
-
-                        </article>
-
-                    <?php endforeach; ?>
-
-                </div>
-
-            <?php endif; ?>
+            </article>
 
         </section>
 
-        <section
-            class="service-form-box"
-            id="serviceForm"
+        <nav
+            class="services-tabs"
+            aria-label="Manage service sections"
         >
 
-            <div class="service-form-heading">
+            <button
+                class="service-tab-button <?= $activePanel === 'catering'
+                    ? 'active'
+                    : '' ?>"
+                type="button"
+                data-service-panel-target="catering"
+            >
+                <i class="fa-solid fa-utensils"></i>
+                Catering Menu
+            </button>
 
-                <h2>
-                    <?= $editingService
-                        ? 'Edit Service'
-                        : 'Add New Service' ?>
-                </h2>
+            <button
+                class="service-tab-button <?= $activePanel === 'music'
+                    ? 'active'
+                    : '' ?>"
+                type="button"
+                data-service-panel-target="music"
+            >
+                <i class="fa-solid fa-music"></i>
+                Music Services
+            </button>
 
-                <p>
-                    <?= $editingService
-                        ? 'Update the selected service information and price.'
-                        : 'Create a service customers can add to their wedding booking.' ?>
-                </p>
+        </nav>
+
+        <section
+            class="service-panel <?= $activePanel === 'catering'
+                ? 'active'
+                : '' ?>"
+            id="catering-panel"
+            data-service-panel="catering"
+        >
+
+            <div class="service-panel-heading">
+
+                <div>
+                    <span>
+                        Catering Management
+                    </span>
+
+                    <h2>
+                        Manage Catering Menu Items
+                    </h2>
+
+                    <p>
+                        Add dishes manually, assign a written
+                        category and set the per-head price.
+                    </p>
+                </div>
+
+                <div class="service-panel-badge">
+                    <i class="fa-solid fa-user-group"></i>
+                    Per-head pricing
+                </div>
 
             </div>
 
-            <form method="post">
+            <div class="service-management-grid">
 
-                <?= csrf_field() ?>
-
-                <input
-                    type="hidden"
-                    name="action"
-                    value="<?= $editingService
-                        ? 'update'
-                        : 'create' ?>"
+                <div
+                    class="service-form-card"
+                    id="cateringForm"
                 >
 
-                <input
-                    type="hidden"
-                    name="service_id"
-                    value="<?= e(
-                        (string) (
-                            $editingService['id']
-                            ?? 0
-                        )
-                    ) ?>"
-                >
+                    <h3>
+                        <?= $editingService
+                            && $activePanel === 'catering'
+                                ? 'Edit Catering Item'
+                                : 'Add Catering Item' ?>
+                    </h3>
 
-                <div class="service-form-grid">
+                    <form method="post">
 
-                    <div class="service-input-box">
-                        <label for="name">
-                            Service Name
-                        </label>
+                        <?= csrf_field() ?>
 
                         <input
-                            type="text"
-                            id="name"
-                            name="name"
-                            value="<?= e(
-                                $formValues['name']
-                            ) ?>"
-                            maxlength="150"
-                            placeholder="Example: Photography"
-                            required
+                            type="hidden"
+                            name="action"
+                            value="<?= $editingService
+                                && $activePanel === 'catering'
+                                    ? 'update'
+                                    : 'create' ?>"
                         >
-                    </div>
-
-                    <div class="service-input-box">
-                        <label for="price">
-                            Service Price
-                        </label>
 
                         <input
-                            type="text"
-                            id="price"
-                            name="price"
+                            type="hidden"
+                            name="service_id"
                             value="<?= e(
-                                $formValues['price']
+                                (string) (
+                                    $editingService
+                                    && $activePanel === 'catering'
+                                        ? $editingService['id']
+                                        : 0
+                                )
                             ) ?>"
-                            placeholder="Example: 25000"
-                            required
                         >
 
-                        <span class="service-help">
-                            Enter 0 when the service is
-                            included without an extra charge.
-                        </span>
-                    </div>
+                        <input
+                            type="hidden"
+                            name="service_type"
+                            value="catering"
+                        >
 
-                    <div
-                        class="service-input-box full-width"
-                    >
-                        <label for="description">
-                            Service Description
-                        </label>
+                        <div class="service-field">
 
-                        <textarea
-                            id="description"
-                            name="description"
-                            maxlength="2000"
-                            placeholder="Explain what this service includes"
-                            required
-                        ><?= e(
-                            $formValues['description']
-                        ) ?></textarea>
-                    </div>
-
-                    <div
-                        class="service-input-box full-width"
-                    >
-                        <label>Service Settings</label>
-
-                        <div class="service-options">
-
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    name="activate_service"
-                                    value="1"
-                                    <?= $formValues['status']
-                                        === 'active'
-                                        ? 'checked'
-                                        : '' ?>
-                                >
-
-                                Activate service for booking
-                                selection
+                            <label for="cateringName">
+                                Dish / Item Name
                             </label>
 
+                            <input
+                                type="text"
+                                id="cateringName"
+                                name="name"
+                                value="<?= e(
+                                    $activePanel === 'catering'
+                                        ? $formValues['name']
+                                        : ''
+                                ) ?>"
+                                maxlength="150"
+                                placeholder="e.g. Mutton Handi Shahi"
+                                required
+                            >
+
                         </div>
-                    </div>
+
+                        <div class="service-field">
+
+                            <label for="cateringCategory">
+                                Group Category Classification
+                            </label>
+
+                            <input
+                                type="text"
+                                id="cateringCategory"
+                                name="category"
+                                value="<?= e(
+                                    $activePanel === 'catering'
+                                        ? $formValues['category']
+                                        : ''
+                                ) ?>"
+                                maxlength="100"
+                                placeholder="e.g. Main Course"
+                                required
+                            >
+
+                            <small>
+                                Write the category manually.
+                                No dropdown menu is used.
+                            </small>
+
+                        </div>
+
+                        <div class="service-field">
+
+                            <label for="cateringPrice">
+                                Assigned Per-Head Price (Rs.)
+                            </label>
+
+                            <input
+                                type="number"
+                                id="cateringPrice"
+                                name="price"
+                                value="<?= e(
+                                    $activePanel === 'catering'
+                                        ? $formValues['price']
+                                        : ''
+                                ) ?>"
+                                min="0"
+                                step="0.01"
+                                placeholder="e.g. 750"
+                                required
+                            >
+
+                        </div>
+
+                        <label
+                            class="website-visibility-control"
+                        >
+
+                            <input
+                                type="checkbox"
+                                name="active_on_website"
+                                value="1"
+                                <?= $activePanel === 'catering'
+                                    && $formValues['status'] === 'active'
+                                        ? 'checked'
+                                        : '' ?>
+                            >
+
+                            <span
+                                class="website-visibility-switch"
+                            ></span>
+
+                            <span
+                                class="website-visibility-copy"
+                            >
+                                <strong>
+                                    Active on Customer Website
+                                </strong>
+
+                                <small>
+                                    Customers can see and select
+                                    this catering item.
+                                </small>
+                            </span>
+
+                        </label>
+
+                        <button
+                            class="service-primary-button"
+                            type="submit"
+                        >
+                            <i class="fa-solid fa-plus"></i>
+
+                            <?= $editingService
+                                && $activePanel === 'catering'
+                                    ? 'Update Catering Item'
+                                    : 'Insert Catering Item' ?>
+                        </button>
+
+                        <?php if (
+                            $editingService
+                            && $activePanel === 'catering'
+                        ): ?>
+
+                            <a
+                                class="service-cancel-link"
+                                href="<?= e(
+                                    url(
+                                        '/admin/services.php#catering-panel'
+                                    )
+                                ) ?>"
+                            >
+                                Cancel Editing
+                            </a>
+
+                        <?php endif; ?>
+
+                    </form>
 
                 </div>
 
-                <div class="service-submit-row">
+                <div class="service-table-card">
 
-                    <button
-                        class="service-submit-button"
-                        type="submit"
-                    >
-                        <?= $editingService
-                            ? 'Update Service'
-                            : 'Add Service' ?>
-                    </button>
+                    <div class="service-table-heading">
 
-                    <?php if ($editingService): ?>
-                        <a
-                            class="service-cancel-button"
-                            href="<?= e(
-                                url('/admin/services.php')
-                            ) ?>"
-                        >
-                            Cancel Editing
-                        </a>
+                        <div>
+                            <h3>
+                                Saved Catering Items
+                            </h3>
+
+                            <p>
+                                Website visibility can be
+                                changed directly from the switch.
+                            </p>
+                        </div>
+
+                        <span>
+                            <?= e(
+                                (string) count(
+                                    $cateringServices
+                                )
+                            ) ?>
+                            items
+                        </span>
+
+                    </div>
+
+                    <?php if (
+                        $cateringServices === []
+                    ): ?>
+
+                        <div class="service-empty-state">
+
+                            <i class="fa-solid fa-utensils"></i>
+
+                            <h4>
+                                No catering items added yet
+                            </h4>
+
+                            <p>
+                                Use the form to add the first
+                                customer menu item.
+                            </p>
+
+                        </div>
+
+                    <?php else: ?>
+
+                        <div class="service-table-scroll">
+
+                            <table class="service-data-table">
+
+                                <thead>
+                                    <tr>
+                                        <th>Item Details</th>
+                                        <th>Category</th>
+                                        <th>Price / Head</th>
+                                        <th>
+                                            Active on Customer Website
+                                        </th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+
+                                    <?php foreach (
+                                        $cateringServices
+                                        as $service
+                                    ): ?>
+
+                                        <tr>
+
+                                            <td>
+                                                <strong>
+                                                    <?= e(
+                                                        (string) $service[
+                                                            'name'
+                                                        ]
+                                                    ) ?>
+                                                </strong>
+
+                                                <small>
+                                                    Selected in
+                                                    <?= e(
+                                                        (string) $service[
+                                                            'booking_count'
+                                                        ]
+                                                    ) ?>
+                                                    booking(s)
+                                                </small>
+                                            </td>
+
+                                            <td>
+                                                <?= e(
+                                                    (string) (
+                                                        $service[
+                                                            'category'
+                                                        ]
+                                                        ?: 'Uncategorised'
+                                                    )
+                                                ) ?>
+                                            </td>
+
+                                            <td
+                                                class="service-table-price"
+                                            >
+                                                <?= e(
+                                                    service_price_label(
+                                                        (float) $service[
+                                                            'price'
+                                                        ]
+                                                    )
+                                                ) ?>
+                                            </td>
+
+                                            <td>
+
+                                                <form
+                                                    class="website-status-form"
+                                                    method="post"
+                                                >
+
+                                                    <?= csrf_field() ?>
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="action"
+                                                        value="toggle_status"
+                                                    >
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="service_id"
+                                                        value="<?= e(
+                                                            (string) $service[
+                                                                'id'
+                                                            ]
+                                                        ) ?>"
+                                                    >
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="service_type"
+                                                        value="catering"
+                                                    >
+
+                                                    <label
+                                                        class="table-visibility-toggle"
+                                                        title="Change customer website visibility"
+                                                    >
+
+                                                        <input
+                                                            type="checkbox"
+                                                            <?= $service['status'] === 'active'
+                                                                ? 'checked'
+                                                                : '' ?>
+                                                            onchange="this.form.submit()"
+                                                        >
+
+                                                        <span></span>
+
+                                                        <strong>
+                                                            <?= $service['status'] === 'active'
+                                                                ? 'Active'
+                                                                : 'Hidden' ?>
+                                                        </strong>
+
+                                                    </label>
+
+                                                </form>
+
+                                            </td>
+
+                                            <td>
+
+                                                <div class="service-row-actions">
+
+                                                    <a
+                                                        class="service-action-edit"
+                                                        href="<?= e(
+                                                            url(
+                                                                '/admin/services.php?edit='
+                                                                . (int) $service['id']
+                                                                . '#cateringForm'
+                                                            )
+                                                        ) ?>"
+                                                        aria-label="Edit catering item"
+                                                    >
+                                                        <i class="fa-solid fa-pen-to-square"></i>
+                                                    </a>
+
+                                                    <form
+                                                        method="post"
+                                                        onsubmit="return confirm('Delete this catering item permanently?');"
+                                                    >
+
+                                                        <?= csrf_field() ?>
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="action"
+                                                            value="delete"
+                                                        >
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="service_id"
+                                                            value="<?= e(
+                                                                (string) $service[
+                                                                    'id'
+                                                                ]
+                                                            ) ?>"
+                                                        >
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="service_type"
+                                                            value="catering"
+                                                        >
+
+                                                        <button
+                                                            class="service-action-delete"
+                                                            type="submit"
+                                                            aria-label="Delete catering item"
+                                                        >
+                                                            <i class="fa-solid fa-trash-can"></i>
+                                                        </button>
+
+                                                    </form>
+
+                                                </div>
+
+                                            </td>
+
+                                        </tr>
+
+                                    <?php endforeach; ?>
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
                     <?php endif; ?>
 
                 </div>
 
-            </form>
+            </div>
+
+        </section>
+
+        <section
+            class="service-panel <?= $activePanel === 'music'
+                ? 'active'
+                : '' ?>"
+            id="music-panel"
+            data-service-panel="music"
+        >
+
+            <div class="service-panel-heading">
+
+                <div>
+                    <span>
+                        Music Management
+                    </span>
+
+                    <h2>
+                        Manage Music & Sound Services
+                    </h2>
+
+                    <p>
+                        Add each music service manually
+                        with its details and fixed price.
+                    </p>
+                </div>
+
+                <div class="service-panel-badge">
+                    <i class="fa-solid fa-tag"></i>
+                    Fixed pricing
+                </div>
+
+            </div>
+
+            <div class="service-management-grid">
+
+                <div
+                    class="service-form-card"
+                    id="musicForm"
+                >
+
+                    <h3>
+                        <?= $editingService
+                            && $activePanel === 'music'
+                                ? 'Edit Music Service'
+                                : 'Add Music Service' ?>
+                    </h3>
+
+                    <form method="post">
+
+                        <?= csrf_field() ?>
+
+                        <input
+                            type="hidden"
+                            name="action"
+                            value="<?= $editingService
+                                && $activePanel === 'music'
+                                    ? 'update'
+                                    : 'create' ?>"
+                        >
+
+                        <input
+                            type="hidden"
+                            name="service_id"
+                            value="<?= e(
+                                (string) (
+                                    $editingService
+                                    && $activePanel === 'music'
+                                        ? $editingService['id']
+                                        : 0
+                                )
+                            ) ?>"
+                        >
+
+                        <input
+                            type="hidden"
+                            name="service_type"
+                            value="music"
+                        >
+
+                        <div class="service-field">
+
+                            <label for="musicName">
+                                Music Service Name
+                            </label>
+
+                            <input
+                                type="text"
+                                id="musicName"
+                                name="name"
+                                value="<?= e(
+                                    $activePanel === 'music'
+                                        ? $formValues['name']
+                                        : ''
+                                ) ?>"
+                                maxlength="150"
+                                placeholder="e.g. Live Music Setup"
+                                required
+                            >
+
+                        </div>
+
+                        <div class="service-field">
+
+                            <label for="musicDescription">
+                                Music Service Details
+                            </label>
+
+                            <textarea
+                                id="musicDescription"
+                                name="description"
+                                maxlength="1000"
+                                placeholder="e.g. Live band, stage equipment and sound system"
+                                required
+                            ><?= e(
+                                $activePanel === 'music'
+                                    ? $formValues['description']
+                                    : ''
+                            ) ?></textarea>
+
+                            <small>
+                                Write the music service manually.
+                                No dropdown menu is used.
+                            </small>
+
+                        </div>
+
+                        <div class="service-field">
+
+                            <label for="musicPrice">
+                                Fixed Music Price (Rs.)
+                            </label>
+
+                            <input
+                                type="number"
+                                id="musicPrice"
+                                name="price"
+                                value="<?= e(
+                                    $activePanel === 'music'
+                                        ? $formValues['price']
+                                        : ''
+                                ) ?>"
+                                min="0"
+                                step="0.01"
+                                placeholder="e.g. 20000"
+                                required
+                            >
+
+                        </div>
+
+                        <label
+                            class="website-visibility-control"
+                        >
+
+                            <input
+                                type="checkbox"
+                                name="active_on_website"
+                                value="1"
+                                <?= $activePanel === 'music'
+                                    && $formValues['status'] === 'active'
+                                        ? 'checked'
+                                        : '' ?>
+                            >
+
+                            <span
+                                class="website-visibility-switch"
+                            ></span>
+
+                            <span
+                                class="website-visibility-copy"
+                            >
+                                <strong>
+                                    Active on Customer Website
+                                </strong>
+
+                                <small>
+                                    Customers can see and select
+                                    this music service.
+                                </small>
+                            </span>
+
+                        </label>
+
+                        <button
+                            class="service-primary-button"
+                            type="submit"
+                        >
+                            <i class="fa-solid fa-plus"></i>
+
+                            <?= $editingService
+                                && $activePanel === 'music'
+                                    ? 'Update Music Service'
+                                    : 'Insert Music Service' ?>
+                        </button>
+
+                        <?php if (
+                            $editingService
+                            && $activePanel === 'music'
+                        ): ?>
+
+                            <a
+                                class="service-cancel-link"
+                                href="<?= e(
+                                    url(
+                                        '/admin/services.php#music-panel'
+                                    )
+                                ) ?>"
+                            >
+                                Cancel Editing
+                            </a>
+
+                        <?php endif; ?>
+
+                    </form>
+
+                </div>
+
+                <div class="service-table-card">
+
+                    <div class="service-table-heading">
+
+                        <div>
+                            <h3>
+                                Saved Music Services
+                            </h3>
+
+                            <p>
+                                Active services will later appear
+                                in customer booking forms.
+                            </p>
+                        </div>
+
+                        <span>
+                            <?= e(
+                                (string) count(
+                                    $musicServices
+                                )
+                            ) ?>
+                            services
+                        </span>
+
+                    </div>
+
+                    <?php if (
+                        $musicServices === []
+                    ): ?>
+
+                        <div class="service-empty-state">
+
+                            <i class="fa-solid fa-music"></i>
+
+                            <h4>
+                                No music services added yet
+                            </h4>
+
+                            <p>
+                                Use the form to add Basic Music,
+                                Live Music or another sound service.
+                            </p>
+
+                        </div>
+
+                    <?php else: ?>
+
+                        <div class="service-table-scroll">
+
+                            <table class="service-data-table">
+
+                                <thead>
+                                    <tr>
+                                        <th>Music Service</th>
+                                        <th>Details</th>
+                                        <th>Fixed Price</th>
+                                        <th>
+                                            Active on Customer Website
+                                        </th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+
+                                    <?php foreach (
+                                        $musicServices
+                                        as $service
+                                    ): ?>
+
+                                        <tr>
+
+                                            <td>
+                                                <strong>
+                                                    <?= e(
+                                                        (string) $service[
+                                                            'name'
+                                                        ]
+                                                    ) ?>
+                                                </strong>
+
+                                                <small>
+                                                    Selected in
+                                                    <?= e(
+                                                        (string) $service[
+                                                            'booking_count'
+                                                        ]
+                                                    ) ?>
+                                                    booking(s)
+                                                </small>
+                                            </td>
+
+                                            <td
+                                                class="service-detail-cell"
+                                            >
+                                                <?= e(
+                                                    (string) (
+                                                        $service[
+                                                            'description'
+                                                        ]
+                                                        ?: 'No details added.'
+                                                    )
+                                                ) ?>
+                                            </td>
+
+                                            <td
+                                                class="service-table-price"
+                                            >
+                                                <?= e(
+                                                    service_price_label(
+                                                        (float) $service[
+                                                            'price'
+                                                        ]
+                                                    )
+                                                ) ?>
+                                            </td>
+
+                                            <td>
+
+                                                <form
+                                                    class="website-status-form"
+                                                    method="post"
+                                                >
+
+                                                    <?= csrf_field() ?>
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="action"
+                                                        value="toggle_status"
+                                                    >
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="service_id"
+                                                        value="<?= e(
+                                                            (string) $service[
+                                                                'id'
+                                                            ]
+                                                        ) ?>"
+                                                    >
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="service_type"
+                                                        value="music"
+                                                    >
+
+                                                    <label
+                                                        class="table-visibility-toggle"
+                                                        title="Change customer website visibility"
+                                                    >
+
+                                                        <input
+                                                            type="checkbox"
+                                                            <?= $service['status'] === 'active'
+                                                                ? 'checked'
+                                                                : '' ?>
+                                                            onchange="this.form.submit()"
+                                                        >
+
+                                                        <span></span>
+
+                                                        <strong>
+                                                            <?= $service['status'] === 'active'
+                                                                ? 'Active'
+                                                                : 'Hidden' ?>
+                                                        </strong>
+
+                                                    </label>
+
+                                                </form>
+
+                                            </td>
+
+                                            <td>
+
+                                                <div class="service-row-actions">
+
+                                                    <a
+                                                        class="service-action-edit"
+                                                        href="<?= e(
+                                                            url(
+                                                                '/admin/services.php?edit='
+                                                                . (int) $service['id']
+                                                                . '#musicForm'
+                                                            )
+                                                        ) ?>"
+                                                        aria-label="Edit music service"
+                                                    >
+                                                        <i class="fa-solid fa-pen-to-square"></i>
+                                                    </a>
+
+                                                    <form
+                                                        method="post"
+                                                        onsubmit="return confirm('Delete this music service permanently?');"
+                                                    >
+
+                                                        <?= csrf_field() ?>
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="action"
+                                                            value="delete"
+                                                        >
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="service_id"
+                                                            value="<?= e(
+                                                                (string) $service[
+                                                                    'id'
+                                                                ]
+                                                            ) ?>"
+                                                        >
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="service_type"
+                                                            value="music"
+                                                        >
+
+                                                        <button
+                                                            class="service-action-delete"
+                                                            type="submit"
+                                                            aria-label="Delete music service"
+                                                        >
+                                                            <i class="fa-solid fa-trash-can"></i>
+                                                        </button>
+
+                                                    </form>
+
+                                                </div>
+
+                                            </td>
+
+                                        </tr>
+
+                                    <?php endforeach; ?>
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    <?php endif; ?>
+
+                </div>
+
+            </div>
 
         </section>
 
     </main>
 
     <script>
+        "use strict";
+
         const adminSidebar =
-            document.getElementById("adminSidebar");
+            document.getElementById(
+                "adminSidebar"
+            );
 
         const sidebarOverlay =
-            document.getElementById("sidebarOverlay");
+            document.getElementById(
+                "sidebarOverlay"
+            );
 
         const sidebarToggle =
-            document.getElementById("sidebarToggle");
+            document.getElementById(
+                "sidebarToggle"
+            );
 
         function closeSidebar() {
-            adminSidebar.classList.remove("open");
-            sidebarOverlay.classList.remove("open");
+            adminSidebar?.classList.remove(
+                "open"
+            );
+
+            sidebarOverlay?.classList.remove(
+                "open"
+            );
         }
 
-        sidebarToggle.addEventListener(
+        sidebarToggle?.addEventListener(
             "click",
             function () {
-                adminSidebar.classList.toggle("open");
-                sidebarOverlay.classList.toggle("open");
+                adminSidebar?.classList.toggle(
+                    "open"
+                );
+
+                sidebarOverlay?.classList.toggle(
+                    "open"
+                );
             }
         );
 
-        sidebarOverlay.addEventListener(
+        sidebarOverlay?.addEventListener(
             "click",
             closeSidebar
+        );
+
+        const serviceTabButtons =
+            document.querySelectorAll(
+                "[data-service-panel-target]"
+            );
+
+        const servicePanels =
+            document.querySelectorAll(
+                "[data-service-panel]"
+            );
+
+        function openServicePanel(
+            panelName
+        ) {
+            serviceTabButtons.forEach(
+                function (button) {
+                    button.classList.toggle(
+                        "active",
+                        button.dataset
+                            .servicePanelTarget
+                            === panelName
+                    );
+                }
+            );
+
+            servicePanels.forEach(
+                function (panel) {
+                    panel.classList.toggle(
+                        "active",
+                        panel.dataset
+                            .servicePanel
+                            === panelName
+                    );
+                }
+            );
+
+            if (
+                window.location.hash
+                !== `#${panelName}-panel`
+            ) {
+                window.history.replaceState(
+                    null,
+                    "",
+                    `#${panelName}-panel`
+                );
+            }
+        }
+
+        serviceTabButtons.forEach(
+            function (button) {
+                button.addEventListener(
+                    "click",
+                    function () {
+                        openServicePanel(
+                            button.dataset
+                                .servicePanelTarget
+                        );
+                    }
+                );
+            }
+        );
+
+        const requestedPanel =
+            window.location.hash.includes(
+                "music"
+            )
+                ? "music"
+                : document.body.dataset
+                    .initialServicePanel;
+
+        openServicePanel(
+            requestedPanel === "music"
+                ? "music"
+                : "catering"
         );
     </script>
 

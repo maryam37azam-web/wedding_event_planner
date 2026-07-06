@@ -7,70 +7,103 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/gallery_display_helpers.php';
 
-require_role('customer');
-
 $connection = db();
-$customerId = (int) $_SESSION['user_id'];
+
+$currentRole = trim(
+    (string) (
+        $_SESSION['role']
+        ?? ''
+    )
+);
+
+$currentUserId = (int) (
+    $_SESSION['user_id']
+    ?? 0
+);
+
+$isCustomerLoggedIn =
+    $currentRole === 'customer'
+    && $currentUserId > 0;
 
 /*
 |--------------------------------------------------------------------------
-| Customer profile
+| Optional customer profile
 |--------------------------------------------------------------------------
 */
 
-$customerStatement = $connection->prepare(
-    'SELECT
-        full_name,
-        email,
-        profile_image,
-        about
-     FROM users
-     WHERE id = ?
-     AND role = ?
-     LIMIT 1'
-);
+$customerName = 'Guest';
+$customerAbout =
+    'Browse active wedding gallery images';
+$customerImage =
+    url('/assets/icons/icon-192.png');
+$customerAccountPath =
+    '/auth/customer_login.php';
 
-$customerStatement->execute([
-    $customerId,
-    'customer',
-]);
+if ($isCustomerLoggedIn) {
+    $customerStatement =
+        $connection->prepare(
+            'SELECT
+                full_name,
+                email,
+                profile_image,
+                about
+             FROM users
+             WHERE id = ?
+             AND role = ?
+             LIMIT 1'
+        );
 
-$customer = $customerStatement->fetch();
+    $customerStatement->execute([
+        $currentUserId,
+        'customer',
+    ]);
 
-if (!$customer) {
-    redirect('/auth/logout.php');
+    $customer =
+        $customerStatement->fetch();
+
+    if ($customer) {
+        $customerName = trim(
+            (string) (
+                $customer['full_name']
+                ?? ''
+            )
+        );
+
+        if ($customerName === '') {
+            $customerName = 'Customer';
+        }
+
+        $customerAbout = trim(
+            (string) (
+                $customer['about']
+                ?? ''
+            )
+        );
+
+        if ($customerAbout === '') {
+            $customerAbout =
+                'Customer Account';
+        }
+
+        if (
+            !empty(
+                $customer['profile_image']
+            )
+        ) {
+            $customerImage =
+                gallery_display_image_url(
+                    (string) $customer[
+                        'profile_image'
+                    ]
+                );
+        }
+
+        $customerAccountPath =
+            '/customer/profile.php';
+    } else {
+        $isCustomerLoggedIn = false;
+    }
 }
-
-$customerName = trim(
-    (string) (
-        $customer['full_name']
-        ?? ''
-    )
-);
-
-if ($customerName === '') {
-    $customerName = 'Customer';
-}
-
-$customerAbout = trim(
-    (string) (
-        $customer['about']
-        ?? ''
-    )
-);
-
-if ($customerAbout === '') {
-    $customerAbout =
-        'Customer Account';
-}
-
-$customerImage = !empty(
-    $customer['profile_image']
-)
-    ? gallery_display_image_url(
-        (string) $customer['profile_image']
-    )
-    : url('/assets/icons/icon-192.png');
 
 /*
 |--------------------------------------------------------------------------
@@ -358,7 +391,7 @@ $currentYear = date('Y');
         <a
             class="customer-all-gallery-brand"
             href="<?= e(
-                url('/customer/dashboard.php')
+                url('/index.php')
             ) ?>"
         >
 
@@ -381,7 +414,7 @@ $currentYear = date('Y');
         <a
             class="customer-all-gallery-user"
             href="<?= e(
-                url('/customer/profile.php')
+                url($customerAccountPath)
             ) ?>"
         >
 
@@ -401,7 +434,7 @@ $currentYear = date('Y');
 
             <img
                 src="<?= e($customerImage) ?>"
-                alt="Customer profile"
+                alt="<?= e($isCustomerLoggedIn ? 'Customer profile' : 'Login') ?>"
             >
 
         </a>

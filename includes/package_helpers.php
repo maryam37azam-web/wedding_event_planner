@@ -215,6 +215,105 @@ function format_package_price(float $price): string
 }
 
 /**
+ * Return the package venue name from any supported package column.
+ */
+function package_venue_name(array $package): string
+{
+    foreach (
+        [
+            'venue_name',
+            'package_venue_name',
+        ] as $column
+    ) {
+        $value = trim(
+            (string) (
+                $package[$column]
+                ?? ''
+            )
+        );
+
+        if ($value !== '') {
+            return $value;
+        }
+    }
+
+    return '';
+}
+
+/**
+ * Return the package venue location from any supported package column.
+ */
+function package_venue_location(array $package): string
+{
+    foreach (
+        [
+            'venue_location',
+            'package_venue_location',
+            'location',
+        ] as $column
+    ) {
+        $value = trim(
+            (string) (
+                $package[$column]
+                ?? ''
+            )
+        );
+
+        if ($value !== '') {
+            return $value;
+        }
+    }
+
+    return '';
+}
+
+/**
+ * Return a clean customer-facing venue label for a package.
+ */
+function package_venue_display(array $package): string
+{
+    $venueName = package_venue_name(
+        $package
+    );
+
+    $venueLocation = package_venue_location(
+        $package
+    );
+
+    if (
+        $venueName !== ''
+        && $venueLocation !== ''
+    ) {
+        if (
+            str_contains(
+                mb_strtolower(
+                    $venueLocation
+                ),
+                mb_strtolower(
+                    $venueName
+                )
+            )
+        ) {
+            return $venueLocation;
+        }
+
+        return $venueName
+            . ' — '
+            . $venueLocation;
+    }
+
+    if ($venueLocation !== '') {
+        return $venueLocation;
+    }
+
+    if ($venueName !== '') {
+        return $venueName;
+    }
+
+    return '';
+}
+
+/**
  * Return the current Admin package-card page type.
  */
 function admin_package_card_page_type(): string

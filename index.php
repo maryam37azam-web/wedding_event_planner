@@ -63,23 +63,6 @@ $venues = $connection
     )
     ->fetchAll();
 
-$services = $connection
-    ->query(
-        "SELECT
-            id,
-            name,
-            description,
-            price
-         FROM services
-         WHERE status = 'active'
-         ORDER BY created_at DESC
-         LIMIT 4"
-    )
-    ->fetchAll();
-
-$showAllGallery =
-    ($_GET['gallery'] ?? '') === 'all';
-
 $gallerySql =
     "SELECT
         id,
@@ -90,11 +73,8 @@ $gallerySql =
         image_two
      FROM gallery
      WHERE status = 'active'
-     ORDER BY created_at DESC";
-
-if (!$showAllGallery) {
-    $gallerySql .= ' LIMIT 8';
-}
+     ORDER BY created_at DESC
+     LIMIT 4";
 
 $galleryImages = $connection
     ->query($gallerySql)
@@ -194,7 +174,7 @@ function public_package_music(
         rel="stylesheet"
         href="<?= e(
             url(
-                '/assets/css/public_home.css?v=66'
+                '/assets/css/public_home.css?v=68'
             )
         ) ?>"
     >
@@ -413,9 +393,15 @@ function public_package_music(
     </header>
 
     <section
-        class="public-section public-section-white"
-        id="about"
+        class="public-section public-section-white public-services-overview"
+        id="services"
     >
+
+        <span
+            class="public-scroll-anchor"
+            id="about"
+            aria-hidden="true"
+        ></span>
 
         <div class="public-section-heading">
 
@@ -437,7 +423,12 @@ function public_package_music(
 
         <div class="public-features-grid">
 
-            <article class="public-feature-card">
+            <button
+                class="public-feature-card"
+                type="button"
+                data-public-service="decor"
+                aria-haspopup="dialog"
+            >
 
                 <div class="public-feature-icon">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
@@ -453,9 +444,19 @@ function public_package_music(
                     vision.
                 </p>
 
-            </article>
+                <span class="public-feature-action">
+                    View Service Details
+                    <i class="fa-solid fa-arrow-right"></i>
+                </span>
 
-            <article class="public-feature-card">
+            </button>
+
+            <button
+                class="public-feature-card"
+                type="button"
+                data-public-service="catering"
+                aria-haspopup="dialog"
+            >
 
                 <div class="public-feature-icon">
                     <i class="fa-solid fa-utensils"></i>
@@ -471,9 +472,19 @@ function public_package_music(
                     your guests.
                 </p>
 
-            </article>
+                <span class="public-feature-action">
+                    View Service Details
+                    <i class="fa-solid fa-arrow-right"></i>
+                </span>
 
-            <article class="public-feature-card">
+            </button>
+
+            <button
+                class="public-feature-card"
+                type="button"
+                data-public-service="music"
+                aria-haspopup="dialog"
+            >
 
                 <div class="public-feature-icon">
                     <i class="fa-solid fa-music"></i>
@@ -489,9 +500,19 @@ function public_package_music(
                     celebration.
                 </p>
 
-            </article>
+                <span class="public-feature-action">
+                    View Service Details
+                    <i class="fa-solid fa-arrow-right"></i>
+                </span>
 
-            <article class="public-feature-card">
+            </button>
+
+            <button
+                class="public-feature-card"
+                type="button"
+                data-public-service="management"
+                aria-haspopup="dialog"
+            >
 
                 <div class="public-feature-icon">
                     <i class="fa-solid fa-clipboard-check"></i>
@@ -507,7 +528,12 @@ function public_package_music(
                     execution.
                 </p>
 
-            </article>
+                <span class="public-feature-action">
+                    View Service Details
+                    <i class="fa-solid fa-arrow-right"></i>
+                </span>
+
+            </button>
 
         </div>
 
@@ -532,6 +558,22 @@ function public_package_music(
                 Explore our active wedding packages,
                 prices and complete details.
             </p>
+
+            <div class="public-section-heading-actions">
+
+                <a
+                    class="public-view-all"
+                    href="<?= e(
+                        url(
+                            '/customer/all_packages.php'
+                        )
+                    ) ?>"
+                >
+                    <i class="fa-solid fa-border-all"></i>
+                    View All Packages
+                </a>
+
+            </div>
 
         </div>
 
@@ -625,6 +667,16 @@ function public_package_music(
                             ?? ''
                         )
                     );
+
+                    $packageVenue =
+                        package_venue_display(
+                            $package
+                        );
+
+                    if ($packageVenue === '') {
+                        $packageVenue =
+                            'Venue location not specified';
+                    }
                     ?>
 
                     <article class="public-package-card">
@@ -707,6 +759,16 @@ function public_package_music(
                                 ) ?>
                             </h3>
 
+                            <div class="public-card-location">
+
+                                <i class="fa-solid fa-location-dot"></i>
+
+                                <?= e(
+                                    $packageVenue
+                                ) ?>
+
+                            </div>
+
                             <div class="public-card-price">
 
                                 <?= e(
@@ -762,6 +824,11 @@ function public_package_music(
                                 ) ?>"
 
                                 data-detail-one="<?= e(
+                                    'Venue: '
+                                    . $packageVenue
+                                ) ?>"
+
+                                data-detail-two="<?= e(
                                     'Guest capacity: '
                                     . number_format(
                                         (int) (
@@ -773,17 +840,14 @@ function public_package_music(
                                     )
                                 ) ?>"
 
-                                data-detail-two="<?= e(
+                                data-detail-three="<?= e(
                                     'Decoration: '
                                     . (
                                         $decoration !== ''
                                             ? $decoration
                                             : 'Included'
                                     )
-                                ) ?>"
-
-                                data-detail-three="<?= e(
-                                    'Music: '
+                                    . ' | Music: '
                                     . public_package_music(
                                         $package
                                     )
@@ -823,6 +887,22 @@ function public_package_music(
                 Explore beautiful venues, locations,
                 prices and event details.
             </p>
+
+            <div class="public-section-heading-actions">
+
+                <a
+                    class="public-view-all"
+                    href="<?= e(
+                        url(
+                            '/customer/all_venues.php'
+                        )
+                    ) ?>"
+                >
+                    <i class="fa-solid fa-border-all"></i>
+                    View All Venues
+                </a>
+
+            </div>
 
         </div>
 
@@ -1097,103 +1177,6 @@ function public_package_music(
     </section>
 
     <section
-        class="public-section"
-        id="services"
-    >
-
-        <div class="public-section-heading">
-
-            <span>
-                Additional services
-            </span>
-
-            <h2>
-                Complete Your Wedding Experience
-            </h2>
-
-            <p>
-                Add professional services according to
-                the needs of your event.
-            </p>
-
-        </div>
-
-        <?php if ($services === []): ?>
-
-            <div class="public-empty">
-
-                <i class="fa-solid fa-bell-concierge"></i>
-
-                <h3>
-                    No services available
-                </h3>
-
-                <p>
-                    Active services will appear here when
-                    added by the Admin.
-                </p>
-
-            </div>
-
-        <?php else: ?>
-
-            <div class="public-services-grid">
-
-                <?php foreach (
-                    $services as $service
-                ): ?>
-
-                    <article class="public-service-card">
-
-                        <div class="public-service-icon">
-                            <i class="fa-solid fa-bell-concierge"></i>
-                        </div>
-
-                        <h3>
-                            <?= e(
-                                (string) $service[
-                                    'name'
-                                ]
-                            ) ?>
-                        </h3>
-
-                        <div class="public-service-price">
-
-                            Rs.
-
-                            <?= e(
-                                number_format(
-                                    (float) $service[
-                                        'price'
-                                    ],
-                                    0
-                                )
-                            ) ?>
-
-                        </div>
-
-                        <p>
-                            <?= e(
-                                (string) (
-                                    $service[
-                                        'description'
-                                    ]
-                                    ?: 'Professional wedding-event service.'
-                                )
-                            ) ?>
-                        </p>
-
-                    </article>
-
-                <?php endforeach; ?>
-
-            </div>
-
-        <?php endif; ?>
-
-    </section>
-
-    <section
         class="public-section public-section-white"
         id="gallery"
     >
@@ -1212,6 +1195,22 @@ function public_package_music(
                 View active wedding images uploaded by
                 our Event Manager.
             </p>
+
+            <div class="public-section-heading-actions">
+
+                <a
+                    class="public-view-all"
+                    href="<?= e(
+                        url(
+                            '/customer/all_gallery.php'
+                        )
+                    ) ?>"
+                >
+                    <i class="fa-solid fa-images"></i>
+                    View All Images
+                </a>
+
+            </div>
 
         </div>
 
@@ -1398,29 +1397,6 @@ function public_package_music(
 
             </div>
 
-            <div class="public-section-footer">
-
-                <a
-                    class="public-view-all"
-                    href="<?= e(
-                        url(
-                            $showAllGallery
-                                ? '/index.php#gallery'
-                                : '/index.php?gallery=all#gallery'
-                        )
-                    ) ?>"
-                >
-                    <i class="fa-solid <?= $showAllGallery
-                        ? 'fa-arrow-left'
-                        : 'fa-images' ?>"></i>
-
-                    <?= $showAllGallery
-                        ? 'Show Latest Images'
-                        : 'View All Images' ?>
-                </a>
-
-            </div>
-
         <?php endif; ?>
 
     </section>
@@ -1558,6 +1534,65 @@ function public_package_music(
         </div>
 
     </footer>
+
+    <div
+        class="public-service-modal"
+        id="publicServiceModal"
+        aria-hidden="true"
+    >
+
+        <div
+            class="public-service-modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="publicServiceTitle"
+        >
+
+            <button
+                class="public-service-modal-close"
+                id="publicServiceClose"
+                type="button"
+                aria-label="Close service details"
+            >
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="public-service-modal-header">
+
+                <div
+                    class="public-service-modal-icon"
+                    id="publicServiceIcon"
+                >
+                    <i class="fa-solid fa-heart"></i>
+                </div>
+
+                <span>
+                    Professional Wedding Service
+                </span>
+
+                <h2 id="publicServiceTitle">
+                    Service Details
+                </h2>
+
+            </div>
+
+            <div class="public-service-modal-body">
+
+                <p
+                    class="public-service-modal-description"
+                    id="publicServiceDescription"
+                ></p>
+
+                <ul
+                    class="public-service-list"
+                    id="publicServiceFeatures"
+                ></ul>
+
+            </div>
+
+        </div>
+
+    </div>
 
     <div
         class="public-modal"
@@ -1734,6 +1769,118 @@ function public_package_music(
                 )
             );
 
+        const serviceModal =
+            document.getElementById(
+                "publicServiceModal"
+            );
+
+        const serviceClose =
+            document.getElementById(
+                "publicServiceClose"
+            );
+
+        const serviceIcon =
+            document.getElementById(
+                "publicServiceIcon"
+            );
+
+        const serviceTitle =
+            document.getElementById(
+                "publicServiceTitle"
+            );
+
+        const serviceDescription =
+            document.getElementById(
+                "publicServiceDescription"
+            );
+
+        const serviceFeatures =
+            document.getElementById(
+                "publicServiceFeatures"
+            );
+
+        const serviceDetailsData = {
+            decor: {
+                title:
+                    "Customized Decoration Services",
+
+                icon:
+                    "fa-solid fa-wand-magic-sparkles",
+
+                description:
+                    "Make your special moments unforgettable with our customized decoration services. We create elegant themes for Engagement, Mehndi, Mayo, Nikkah, Barat, and Walima events, designed to match your style, colors, and budget.",
+
+                features: [
+                    "Elegant Stage Decoration",
+                    "Fresh Floral Arrangements",
+                    "Venue & Hall Decoration",
+                    "Entrance & Walkway Décor",
+                    "Table & Chair Styling",
+                    "Budget-Friendly Packages",
+                    "Premium Luxury Decoration",
+                    "Complete Wedding Decoration Solutions"
+                ]
+            },
+
+            catering: {
+                title:
+                    "Premium Catering Services",
+
+                icon:
+                    "fa-solid fa-utensils",
+
+                description:
+                    "We provide delicious cuisine and customized menus for every wedding event, ensuring quality, taste, and exceptional service for all your guests.",
+
+                features: [
+                    "Customized Menu Selection",
+                    "Traditional & Continental Cuisine",
+                    "Fresh & Hygienic Food",
+                    "Professional Catering Staff",
+                    "Desserts & Sweet Dishes",
+                    "Beverages & Refreshments",
+                    "Quality Food Preparation"
+                ]
+            },
+
+            music: {
+                title:
+                    "Music and Atmosphere",
+
+                icon:
+                    "fa-solid fa-music",
+
+                description:
+                    "We manage standard audio systems to maintain an appropriate, lively, yet respectable environment for your family events:",
+
+                features: [
+                    "Background Sound Systems: Perfect for soft music or traditional songs during family entry ceremonies.",
+                    "Clarity Mic Setup: Dedicated high-quality wireless microphones for Nikkah Khutba, prayers, and announcements.",
+                    "Volume Level Optimization: Carefully balanced sound profiles so that elderly guests and children remain completely comfortable."
+                ]
+            },
+
+            management: {
+                title:
+                    "Complete Event Management",
+
+                icon:
+                    "fa-solid fa-clipboard-check",
+
+                description:
+                    "Our specialized staff coordinates every logistical detail seamlessly from the start of the event until your last guest departs comfortably:",
+
+                features: [
+                    "Multi-Event Coordination: Full end-to-end management for Duay Khair, Engagement, Mayo, Mehndi, Nikkah, Barat, and Walima.",
+                    "Strict Punctuality: Ensuring the gates open on schedule and dinner is served strictly at the requested time.",
+                    "Guest Assistance Setup: Seamless crowd management and structured seating coordination for immediate family circles.",
+                    "Power Failure Protection: Continuous heavy-duty backup generators to ensure completely uninterrupted lighting and cooling systems."
+                ]
+            }
+        };
+
+        let lastServiceTrigger = null;
+
         const detailsModal =
             document.getElementById(
                 "publicDetailsModal"
@@ -1800,6 +1947,171 @@ function public_package_music(
                     ? "hidden"
                     : "";
         }
+
+        function closeServiceModal() {
+            serviceModal?.classList.remove(
+                "open"
+            );
+
+            serviceModal?.setAttribute(
+                "aria-hidden",
+                "true"
+            );
+
+            if (serviceFeatures) {
+                serviceFeatures.innerHTML =
+                    "";
+            }
+
+            setPageLocked(false);
+
+            lastServiceTrigger?.focus();
+
+            lastServiceTrigger = null;
+        }
+
+        function openServiceModal(
+            trigger
+        ) {
+            const serviceKey =
+                trigger.dataset
+                    .publicService
+                || "";
+
+            const serviceData =
+                serviceDetailsData[
+                    serviceKey
+                ];
+
+            if (
+                !serviceData
+                || !serviceModal
+                || !serviceTitle
+                || !serviceDescription
+                || !serviceFeatures
+                || !serviceIcon
+            ) {
+                return;
+            }
+
+            lastServiceTrigger =
+                trigger;
+
+            serviceTitle.textContent =
+                serviceData.title;
+
+            serviceDescription.textContent =
+                serviceData.description;
+
+            serviceIcon.innerHTML =
+                "";
+
+            const icon =
+                document.createElement(
+                    "i"
+                );
+
+            icon.className =
+                serviceData.icon;
+
+            serviceIcon.appendChild(
+                icon
+            );
+
+            serviceFeatures.innerHTML =
+                "";
+
+            serviceFeatures.classList.toggle(
+                "compact",
+                serviceData.features.length > 5
+            );
+
+            serviceData.features.forEach(
+                function (feature) {
+                    const listItem =
+                        document.createElement(
+                            "li"
+                        );
+
+                    const checkIcon =
+                        document.createElement(
+                            "i"
+                        );
+
+                    const text =
+                        document.createElement(
+                            "span"
+                        );
+
+                    checkIcon.className =
+                        "fa-solid fa-circle-check";
+
+                    text.textContent =
+                        feature;
+
+                    listItem.append(
+                        checkIcon,
+                        text
+                    );
+
+                    serviceFeatures
+                        .appendChild(
+                            listItem
+                        );
+                }
+            );
+
+            serviceModal.classList.add(
+                "open"
+            );
+
+            serviceModal.setAttribute(
+                "aria-hidden",
+                "false"
+            );
+
+            setPageLocked(true);
+
+            window.requestAnimationFrame(
+                function () {
+                    serviceClose?.focus();
+                }
+            );
+        }
+
+        document
+            .querySelectorAll(
+                "[data-public-service]"
+            )
+            .forEach(
+                function (button) {
+                    button.addEventListener(
+                        "click",
+                        function () {
+                            openServiceModal(
+                                button
+                            );
+                        }
+                    );
+                }
+            );
+
+        serviceClose?.addEventListener(
+            "click",
+            closeServiceModal
+        );
+
+        serviceModal?.addEventListener(
+            "click",
+            function (event) {
+                if (
+                    event.target
+                    === serviceModal
+                ) {
+                    closeServiceModal();
+                }
+            }
+        );
 
         function setActiveNavigation(
             sectionId
@@ -2398,6 +2710,23 @@ function public_package_music(
         document.addEventListener(
             "keydown",
             function (event) {
+                if (
+                    serviceModal
+                        ?.classList
+                        .contains(
+                            "open"
+                        )
+                ) {
+                    if (
+                        event.key
+                        === "Escape"
+                    ) {
+                        closeServiceModal();
+                    }
+
+                    return;
+                }
+
                 if (
                     imageModal
                         ?.classList

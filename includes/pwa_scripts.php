@@ -2,31 +2,44 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/functions.php';
+require_once __DIR__
+    . '/functions.php';
 
 $weddingScriptName = str_replace(
     '\\',
     '/',
     (string) (
-        $_SERVER['SCRIPT_NAME']
+        $_SERVER[
+            'SCRIPT_NAME'
+        ]
         ?? ''
     )
 );
 
 $weddingCurrentRole = (string) (
     $_SESSION['user_role']
+    ?? $_SESSION['role']
     ?? ''
 );
 
 $weddingAdminUiEnabled =
-    $weddingCurrentRole === 'admin'
+    $weddingCurrentRole
+        === 'admin'
     && str_contains(
         $weddingScriptName,
         '/admin/'
     );
 
+$weddingAdminPackagesPage =
+    $weddingAdminUiEnabled
+    && str_ends_with(
+        $weddingScriptName,
+        '/admin/packages.php'
+    );
+
 $weddingEventManagerUiEnabled =
-    $weddingCurrentRole === 'event_manager'
+    $weddingCurrentRole
+        === 'event_manager'
     && (
         str_contains(
             $weddingScriptName,
@@ -39,7 +52,8 @@ $weddingEventManagerUiEnabled =
     );
 
 $weddingBookingManagerUiEnabled =
-    $weddingCurrentRole === 'booking_manager'
+    $weddingCurrentRole
+        === 'booking_manager'
     && (
         str_contains(
             $weddingScriptName,
@@ -51,8 +65,27 @@ $weddingBookingManagerUiEnabled =
         )
     );
 
+/*
+|--------------------------------------------------------------------------
+| Customer checkout uses its own complete page layout.
+|--------------------------------------------------------------------------
+|
+| customer_consistency.js looks for customer dashboard sidebars.
+| The booking checkout has its own two-column interface, so that script
+| must not run on customer/booking.php.
+|
+*/
+
+$weddingCustomerCheckoutPage =
+    str_ends_with(
+        $weddingScriptName,
+        '/customer/booking.php'
+    );
+
 $weddingCustomerUiEnabled =
-    $weddingCurrentRole === 'customer'
+    !$weddingCustomerCheckoutPage
+    && $weddingCurrentRole
+        === 'customer'
     && (
         str_contains(
             $weddingScriptName,
@@ -63,12 +96,23 @@ $weddingCustomerUiEnabled =
             '/gallery/'
         )
     );
-
 ?>
 
 <script
     src="<?= e(
-        url('/assets/js/pwa.js')
+        url(
+            '/assets/js/pwa.js'
+        )
+    ) ?>"
+    defer
+></script>
+
+<script
+    src="<?= e(
+        url(
+            '/assets/js/public_booking_navigation.js'
+            . '?v=20260705-2'
+        )
     ) ?>"
     defer
 ></script>
@@ -105,6 +149,22 @@ $weddingCustomerUiEnabled =
             url(
                 '/assets/js/admin_consistency.js'
                 . '?v=20260703-3'
+            )
+        ) ?>"
+        defer
+    ></script>
+
+<?php endif; ?>
+
+<?php if (
+    $weddingAdminPackagesPage
+): ?>
+
+    <script
+        src="<?= e(
+            url(
+                '/assets/js/admin_package_menu_selector.js'
+                . '?v=20260705-1'
             )
         ) ?>"
         defer
@@ -150,6 +210,7 @@ $weddingCustomerUiEnabled =
         src="<?= e(
             url(
                 '/assets/js/customer_consistency.js'
+                . '?v=20260705-2'
             )
         ) ?>"
         defer

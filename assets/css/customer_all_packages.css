@@ -516,6 +516,33 @@ body.customer-all-package-modal-open {
     white-space: nowrap;
 }
 
+.customer-all-package-location {
+    margin-bottom: 7px;
+
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+
+    color: #6f6870;
+
+    font-size: 9px;
+    line-height: 1.45;
+}
+
+.customer-all-package-location i {
+    flex: 0 0 auto;
+    margin-top: 2px;
+
+    color:
+        var(--customer-all-accent);
+}
+
+.customer-all-package-location span {
+    min-width: 0;
+
+    overflow-wrap: anywhere;
+}
+
 .customer-all-package-description {
     min-height: 43px;
     margin-bottom: 9px;
